@@ -12,5 +12,6 @@ org.my.pro.dhtcrawler.Main
 
 ## 备注
 
-参考协议:  DHT Protocol 链接: http://www.bittorrent.org/beps/bep_0005.html
-默认将种子hash保存到 data/magnet.mg文件
+* 参考协议:  DHT Protocol  http://www.bittorrent.org/beps/bep_0005.html
+* 默认将种子hash保存到 data/magnet.mg文件
+
