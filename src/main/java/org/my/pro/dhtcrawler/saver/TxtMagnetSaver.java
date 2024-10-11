@@ -50,6 +50,7 @@ public class TxtMagnetSaver implements MagnetSaver {
 			public void run() {
 
 				try {
+					
 					FileUtils.writeStringToFile(file, hash + NEW_LINE, true);
 				} catch (IOException e) {
 					// TODO Auto-generated catch block

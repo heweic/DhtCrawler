@@ -33,7 +33,7 @@ public class DefaultErro extends AbstractMessage implements ErroMessage {
 
 	public DefaultErro(InetSocketAddress addr, BEncodedValue code, BEncodedValue info ,String localId) {
 		//
-		super(E, RequestIdGenerator.getRequestId(localId), addr);
+		super(E, RequestIdGenerator.getRequestId(), addr);
 		//
 		this.code = code;
 		this.info = info;

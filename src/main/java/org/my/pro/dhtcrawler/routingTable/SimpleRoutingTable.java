@@ -1,4 +1,4 @@
-package org.my.pro.dhtcrawler.domain;
+package org.my.pro.dhtcrawler.routingTable;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -6,7 +6,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -14,27 +13,47 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.my.pro.dhtcrawler.DhtNode;
 import org.my.pro.dhtcrawler.KrpcMessage;
+import org.my.pro.dhtcrawler.LocalDHTNode;
 import org.my.pro.dhtcrawler.NodeInfo;
 import org.my.pro.dhtcrawler.RoutingTable;
 import org.my.pro.dhtcrawler.message.MessageFactory;
 
-public abstract class AbstractRoutingTable implements RoutingTable {
+/**
+ * 节点表实现
+ * 
+ * 1.存贮通信节点
+ * 2.定时清理超时节点
+ * 3.定时填充节点
+ * 
+ * router.utorrent.com 6881
+ * dht.transmissionbt.com 6881
+ * router.bittorrent.com 6881
+ */
+public class SimpleRoutingTable implements RoutingTable {
 
 	public static final long timeOut = 60 * 15 * 1000;
 
-	protected Executor executor = Executors.newCachedThreadPool();
 	protected ScheduledExecutorService worker = Executors.newScheduledThreadPool(3);
 
 	protected ConcurrentHashMap<BigInteger, NodeInfo> nodes = new ConcurrentHashMap<>();
 	protected List<BigInteger> ids = Collections.synchronizedList(new ArrayList<>());
 	//
-	protected DhtNode localNode;
+	protected LocalDHTNode localNode;
 
-	private static Log log = LogFactory.getLog(AbstractRoutingTable.class);
+	private static Log log = LogFactory.getLog(SimpleRoutingTable.class);
 	
-	public AbstractRoutingTable(DhtNode localNode) {
+	
+
+	
+
+	public SimpleRoutingTable(LocalDHTNode localNode) {
+		
+		//
+		
+		
+		
+		
 		this.localNode = localNode;
 
 		// 15分钟清理一次 清理超时/无响应节点
@@ -69,7 +88,7 @@ public abstract class AbstractRoutingTable implements RoutingTable {
 					BigInteger id = iterator.next();
 					NodeInfo info = nodes.get(id);
 					if (null != info && (info.activeTime() + (1000 * 60 * 10) < nowTime)) {
-						localNode.exec(MessageFactory.createPing(info, localNode.id()));
+						localNode.channel().writeAndFlush(MessageFactory.createPing(info, localNode.id()));
 					}
 				}
 
@@ -77,30 +96,26 @@ public abstract class AbstractRoutingTable implements RoutingTable {
 		}, 60, 60 * 5, TimeUnit.SECONDS);
 
 		// 如果列表小于 K
-		worker.scheduleAtFixedRate(new Runnable() {
-			@Override
-			public void run() {
-
-				if (ids.size() < 1000) {
-
-					whenTableLess();
-				}
-
-			}
-		}, 60, 60, TimeUnit.SECONDS);
+//		worker.scheduleAtFixedRate(new Runnable() {
+//			@Override
+//			public void run() {
+//
+//				if (ids.size() < 1000) {
+//
+//				//	whenTableLess();
+//				}
+//
+//			}
+//		}, 60, 60, TimeUnit.SECONDS);
 	}
 
-	public abstract void whenTableLess();
-
-	
-	
 	@Override
 	public boolean has(BigInteger id) {
 		return ids.contains(id);
 	}
 
 	@Override
-	public void add(NodeInfo info, KrpcMessage krpcMessage) {
+	public void add(NodeInfo info) {
 		if (null == info) {
 			return;
 		}
@@ -108,14 +123,12 @@ public abstract class AbstractRoutingTable implements RoutingTable {
 			nodes.replace(info.nodeId().intId(), info);
 			return;
 		}
-		log.info("添加节点:" + "[" + info.ip() + ":" + info.port() + "]" +"--------" + "{" + info.nodeId().intId() + "}");
+		//log.info("添加节点:" + "[" + info.ip() + ":" + info.port() + "]" + "--------" + "{" + info.nodeId().intId() + "}");
 		ids.add(info.nodeId().intId());
 		nodes.put(info.nodeId().intId(), info);
 		//
-		add0(info, krpcMessage);
-	}
 
-	public abstract void add0(NodeInfo info, KrpcMessage krpcMessage);
+	}
 
 	@Override
 	public List<NodeInfo> findNearest(BigInteger id) {

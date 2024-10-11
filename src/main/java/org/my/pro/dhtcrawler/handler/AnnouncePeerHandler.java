@@ -2,7 +2,7 @@ package org.my.pro.dhtcrawler.handler;
 
 import java.math.BigInteger;
 
-import org.my.pro.dhtcrawler.DhtNode;
+import org.my.pro.dhtcrawler.LocalDHTNode;
 import org.my.pro.dhtcrawler.KeyWord;
 import org.my.pro.dhtcrawler.KrpcMessage;
 import org.my.pro.dhtcrawler.RoutingTable;
@@ -10,6 +10,7 @@ import org.my.pro.dhtcrawler.WorkHandler;
 import org.my.pro.dhtcrawler.message.DefaultRequest;
 import org.my.pro.dhtcrawler.message.DefaultResponse;
 import org.my.pro.dhtcrawler.util.BenCodeUtils;
+import org.my.pro.dhtcrawler.util.ByteArrayHexUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,7 +28,7 @@ public class AnnouncePeerHandler extends RequestMessageHandler {
 
 	private static Logger logger = LoggerFactory.getLogger(AnnouncePeerHandler.class);
 
-	public AnnouncePeerHandler(RoutingTable routingTable, DhtNode dhtNode, WorkHandler handler) {
+	public AnnouncePeerHandler(RoutingTable routingTable, LocalDHTNode dhtNode, WorkHandler handler) {
 		super(routingTable, dhtNode);
 		this.handler = handler;
 	}
@@ -37,8 +38,8 @@ public class AnnouncePeerHandler extends RequestMessageHandler {
 
 		if (message instanceof DefaultRequest) {
 			DefaultRequest defaultRequest = (DefaultRequest) message;
-
-			String code = magnetCode(defaultRequest.a().getMap().get(KeyWord.INFO_HASH).getString("iso-8859-1"));
+			
+			String code = ByteArrayHexUtils.byteArrayToHexString(defaultRequest.a().getMap().get(KeyWord.INFO_HASH).getBytes());
 
 			String mes = message.addr().getAddress().getHostAddress() + "下载端口:"
 					+ defaultRequest.a().getMap().get("port").getInt() + "种子hash:" + code;
@@ -50,7 +51,7 @@ public class AnnouncePeerHandler extends RequestMessageHandler {
 		}
 
 		DefaultResponse defaultResponse = new DefaultResponse(message.t(), message.addr());
-		defaultResponse.setR(BenCodeUtils.to(KeyWord.ID, dhtNode.id().getBytes()));
+		defaultResponse.setR(BenCodeUtils.to(KeyWord.ID, dhtNode.id()));
 		//
 		return defaultResponse;
 	}

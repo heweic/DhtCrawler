@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.my.pro.dhtcrawler.DhtNode;
+import org.my.pro.dhtcrawler.LocalDHTNode;
 import org.my.pro.dhtcrawler.KeyWord;
 import org.my.pro.dhtcrawler.KrpcMessage;
 import org.my.pro.dhtcrawler.NodeInfo;
@@ -14,6 +14,7 @@ import org.my.pro.dhtcrawler.WorkHandler;
 import org.my.pro.dhtcrawler.message.DefaultRequest;
 import org.my.pro.dhtcrawler.message.DefaultResponse;
 import org.my.pro.dhtcrawler.util.BenCodeUtils;
+import org.my.pro.dhtcrawler.util.ByteArrayHexUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +37,7 @@ public class GetPeersHandler extends RequestMessageHandler {
 
 	private Logger logger = LoggerFactory.getLogger(GetPeersHandler.class);
 
-	public GetPeersHandler(RoutingTable routingTable, DhtNode dhtNode, WorkHandler handler) {
+	public GetPeersHandler(RoutingTable routingTable, LocalDHTNode dhtNode, WorkHandler handler) {
 		super(routingTable, dhtNode);
 		this.handler = handler;
 	}
@@ -50,7 +51,7 @@ public class GetPeersHandler extends RequestMessageHandler {
 			byte[] bs = defaultRequest.a().getMap().get(KeyWord.INFO_HASH).getBytes();
 			BigInteger bigInteger = new BigInteger(bs);
 
-			String code = magnetCode(new String(bs, KeyWord.DHT_CHARSET));
+			String code = ByteArrayHexUtils.byteArrayToHexString(bs);
 			
 			logger.info("{  " + dhtNode.port() + "  }  " + code + "{ " +message.addr().getAddress().getHostAddress() + ":" + message.addr().getPort() + " }");
 
@@ -70,7 +71,7 @@ public class GetPeersHandler extends RequestMessageHandler {
 
 			DefaultResponse defaultResponse = new DefaultResponse(message.t(), message.addr());
 			try {
-				BEncodedValue r = BenCodeUtils.to(KeyWord.ID, dhtNode.id().getBytes(), KeyWord.NODES, buffer.array());
+				BEncodedValue r = BenCodeUtils.to(KeyWord.ID, dhtNode.id(), KeyWord.NODES, buffer.array());
 				r.getMap().put(KeyWord.TOKEN, new BEncodedValue(RandomStringUtils.random(6)));
 				defaultResponse.setR(r);
 			}catch (Exception e) {

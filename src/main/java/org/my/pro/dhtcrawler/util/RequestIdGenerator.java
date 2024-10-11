@@ -1,5 +1,6 @@
 package org.my.pro.dhtcrawler.util;
 
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -17,13 +18,15 @@ public class RequestIdGenerator {
 	 * 
 	 * @return
 	 */
-	public static String getRequestId(String localId) {
+	public static String getRequestId() {
 
-		if (!concurrentHashMap.containsKey(localId)) {
-			concurrentHashMap.putIfAbsent(localId, new AtomicLong(0L));
-		}
-
-		return localId + "_" + concurrentHashMap.get(localId).incrementAndGet();
+//		if (!concurrentHashMap.containsKey(localId)) {
+//			concurrentHashMap.putIfAbsent(localId, new AtomicLong(0L));
+//		}
+//
+//		return localId + "_" + concurrentHashMap.get(localId).incrementAndGet();
+		
+		return UUID.randomUUID().toString().replaceAll("-", "");
 
 	}
 

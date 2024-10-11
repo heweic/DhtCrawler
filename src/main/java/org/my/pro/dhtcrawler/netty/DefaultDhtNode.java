@@ -1,16 +1,18 @@
 package org.my.pro.dhtcrawler.netty;
 
+import java.util.concurrent.CountDownLatch;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.my.pro.dhtcrawler.AbstractDhtNode;
 import org.my.pro.dhtcrawler.KrpcMessage;
-import org.my.pro.dhtcrawler.ServerStarted;
-import org.my.pro.dhtcrawler.domain.AbstractDhtNode;
+import org.my.pro.dhtcrawler.util.GsonUtils;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
@@ -18,71 +20,100 @@ import io.netty.channel.socket.nio.NioDatagramChannel;
 public class DefaultDhtNode extends AbstractDhtNode {
 
 	private EventLoopGroup group;
-	private Bootstrap b;
-	private Channel c;
-	private ServerStarted serverStarted;
+	private Bootstrap bootstrap;
+	private ChannelFuture channelFuture;
 
-	public DefaultDhtNode(String id, int port) {
+	private static Log log = LogFactory.getLog(DefaultDhtNode.class);
+
+	private ChannelHandler channelHandler;
+
+	private Thread nodeThread;
+
+	public DefaultDhtNode(byte[] id, int port) {
 		super(id, port);
+		//
 
 	}
 
+	
 	@Override
-	public void start(ChannelHandler channelHandler) {
-		try {
+	public void sendMessage(KrpcMessage krpcMessage) {
+		channelFuture.channel().writeAndFlush(krpcMessage);
+	}
 
-			group = new NioEventLoopGroup();
 
-			b = new Bootstrap();
-			b.group(group).channel(NioDatagramChannel.class).option(ChannelOption.SO_BROADCAST, true);
+	@Override
+	public void setChannelHandler(ChannelHandler channelHandler) {
+		this.channelHandler = channelHandler;
+	}
 
-			b.handler(new ChannelInitializer<NioDatagramChannel>() {
-				@Override
-				protected void initChannel(NioDatagramChannel ch) throws Exception {
-					ChannelPipeline p = ch.pipeline();
-					p.addLast(new DataServerCodec());
-					p.addLast(channelHandler);
-				}
-			});
-			ChannelFuture channelFuture = b.bind(port()).sync();
+	@Override
+	public Channel channel() {
+		return channelFuture.channel();
+	}
 
-			if (channelFuture.isSuccess()) {
+	private CountDownLatch countDownLatch = new CountDownLatch(1);
 
-				if (null != serverStarted) {
-					serverStarted.work(channelFuture.channel());
+	@Override
+	public void start() {
+
+		nodeThread = new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				try {
+
+					group = new NioEventLoopGroup();
+
+					bootstrap = new Bootstrap();
+					bootstrap.group(group).channel(NioDatagramChannel.class).option(ChannelOption.SO_BROADCAST, true);
+					bootstrap.handler(channelHandler);
+
+					channelFuture = bootstrap.bind(port()).sync();
+					channelFuture.addListener(future -> {
+						if (future.isSuccess()) {
+							log.info("启动节点:" + GsonUtils.GSON.toJson(id()) + "-" + channelFuture.channel().localAddress());
+						} else {
+							log.info("启动节点:" + GsonUtils.GSON.toJson(id()) + "-" + port() + "失败!");
+						}
+						countDownLatch.countDown();
+					});
+
+					
+					channelFuture.channel().closeFuture().await();
+
+				} catch (Exception e) {
+					e.printStackTrace();
+					System.out.println("节点启动失败..." + port());
+				} finally {
+					group.shutdownGracefully();
 				}
 
 			}
-			c = channelFuture.channel();
+		});
 
-			c.closeFuture().await();
-		} catch (Exception e) {
-			System.out.println("节点启动失败..." + port());
+		nodeThread.start();
+
+		//
+		try {
+			countDownLatch.await();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
+
 	}
 
 	@Override
 	public void stop() {
-		if (null != c) {
-			c.close();
+		if (null != channelFuture.channel()) {
+			channelFuture.channel().close();
 		}
 	}
 
 	@Override
 	public boolean isRun() {
-		return c != null && c.isActive();
-	}
-
-	@Override
-	public void exec(KrpcMessage krpcMessage) {
-		if (null == krpcMessage) {
-			return;
-		}
-		c.writeAndFlush(krpcMessage);
-	}
-
-	public void setServerStarted(ServerStarted serverStarted) {
-		this.serverStarted = serverStarted;
+		return channelFuture != null && channelFuture.channel().isActive();
 	}
 
 }

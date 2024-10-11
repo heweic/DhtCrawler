@@ -35,6 +35,9 @@ public class BenDecoder extends MessageToMessageDecoder<DatagramPacket> {
 			String messageType = bv.getMap().get(KeyWord.Y).getString();
 			String transactionID = bv.getMap().get(KeyWord.T).getString();
 			InetSocketAddress addr = msg.sender();
+
+			// KrpcMessage message;
+
 			switch (messageType) {
 			case KrpcMessage.E:
 				break;
@@ -43,7 +46,7 @@ public class BenDecoder extends MessageToMessageDecoder<DatagramPacket> {
 				//
 				defaultResponse.setR(bv.getMap().get(KeyWord.R));
 				//
-				out.add(defaultResponse);
+				out.add((KrpcMessage) defaultResponse);
 				break;
 			case KrpcMessage.Q:
 				DefaultRequest defaultRequest = new DefaultRequest(transactionID, addr);
@@ -51,14 +54,14 @@ public class BenDecoder extends MessageToMessageDecoder<DatagramPacket> {
 				defaultRequest.setA(bv.getMap().get(KeyWord.A));
 				defaultRequest.setQ(bv.getMap().get(KeyWord.Q).getString());
 				//
-				out.add(defaultRequest);
+				out.add((KrpcMessage) defaultRequest);
 				break;
 			default:
 				break;
 			}
 
 		} catch (Exception e) {
-			e.printStackTrace();
+			
 		}
 	}
 

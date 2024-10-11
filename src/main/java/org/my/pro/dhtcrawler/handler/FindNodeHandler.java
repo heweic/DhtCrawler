@@ -4,7 +4,7 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-import org.my.pro.dhtcrawler.DhtNode;
+import org.my.pro.dhtcrawler.LocalDHTNode;
 import org.my.pro.dhtcrawler.KeyWord;
 import org.my.pro.dhtcrawler.KrpcMessage;
 import org.my.pro.dhtcrawler.NodeInfo;
@@ -23,7 +23,7 @@ import org.my.pro.dhtcrawler.util.BenCodeUtils;
  */
 public class FindNodeHandler extends RequestMessageHandler {
 
-	public FindNodeHandler(RoutingTable routingTable, DhtNode dhtNode) {
+	public FindNodeHandler(RoutingTable routingTable, LocalDHTNode dhtNode) {
 		super(routingTable, dhtNode);
 	}
 
@@ -46,7 +46,7 @@ public class FindNodeHandler extends RequestMessageHandler {
 			}
 
 			DefaultResponse defaultResponse = new DefaultResponse(message.t(), message.addr());
-			defaultResponse.setR(BenCodeUtils.to(KeyWord.ID, dhtNode.id().getBytes(), KeyWord.NODES, buffer.array()));
+			defaultResponse.setR(BenCodeUtils.to(KeyWord.ID, dhtNode.id(), KeyWord.NODES, buffer.array()));
 
 			//
 			return defaultResponse;

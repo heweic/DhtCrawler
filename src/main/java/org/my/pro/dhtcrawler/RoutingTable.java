@@ -11,7 +11,7 @@ public interface RoutingTable {
 	/**
 	 * 添加节点
 	 */
-	public void add(NodeInfo info , KrpcMessage krpcMessage);
+	public void add(NodeInfo info );
 
 	/**
 	 * 查找节点最近个K个节点

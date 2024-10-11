@@ -1,4 +1,4 @@
-package org.my.pro.dhtcrawler.domain;
+package org.my.pro.dhtcrawler.routingTable;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;

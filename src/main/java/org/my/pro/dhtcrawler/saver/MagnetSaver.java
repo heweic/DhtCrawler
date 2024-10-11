@@ -7,9 +7,6 @@ public interface MagnetSaver {
 
 	public void saveMagnet(String hash);
 	
-	
-	
-	
 	public void saveBtInfo(BtInfo btInfo);
 	
 }

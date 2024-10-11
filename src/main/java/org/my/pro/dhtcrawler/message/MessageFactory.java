@@ -25,14 +25,14 @@ public class MessageFactory {
 		return defaultErro;
 	}
 
-	public static KrpcMessage createPing(NodeInfo info, String localId) {
+	public static KrpcMessage createPing(NodeInfo info, byte[] id) {
 
 		try {
-			DefaultRequest defaultRequest = new DefaultRequest(RequestIdGenerator.getRequestId(localId),
+			DefaultRequest defaultRequest = new DefaultRequest(RequestIdGenerator.getRequestId(),
 					new InetSocketAddress(info.ip(), info.port()));
 			//
 			defaultRequest.setQ(KeyWord.PING);
-			defaultRequest.setA(BenCodeUtils.to(KeyWord.ID, localId.getBytes(KeyWord.DHT_CHARSET)));
+			defaultRequest.setA(BenCodeUtils.to(KeyWord.ID, id));
 			//
 			return defaultRequest;
 
@@ -41,14 +41,13 @@ public class MessageFactory {
 		}
 	}
 
-	public static KrpcMessage createFindNode(String ip, int port, String localId) {
+	public static KrpcMessage createFindNode(String ip, int port, byte[] localID, byte[] targetId) {
 		try {
-			DefaultRequest defaultRequest = new DefaultRequest(RequestIdGenerator.getRequestId(localId),
+			DefaultRequest defaultRequest = new DefaultRequest(RequestIdGenerator.getRequestId(),
 					new InetSocketAddress(ip, port));
 			//
 			defaultRequest.setQ(KeyWord.FIND_NODE);
-			defaultRequest.setA(BenCodeUtils.to(KeyWord.ID, localId.getBytes(KeyWord.DHT_CHARSET), KeyWord.TARGET,
-					randomTargetId(localId).getBytes(KeyWord.DHT_CHARSET)));
+			defaultRequest.setA(BenCodeUtils.to(KeyWord.ID, localID, KeyWord.TARGET, targetId));
 			//
 			return defaultRequest;
 
@@ -56,14 +55,13 @@ public class MessageFactory {
 			return null;
 		}
 	}
-	public static KrpcMessage createGet_peers(String ip, int port, String localId , String hash) {
+	public static KrpcMessage createGet_peers(String ip, int port, byte[] localId , byte[] hash) {
 		try {
-			DefaultRequest defaultRequest = new DefaultRequest(RequestIdGenerator.getRequestId(localId),
+			DefaultRequest defaultRequest = new DefaultRequest(RequestIdGenerator.getRequestId(),
 					new InetSocketAddress(ip, port));
 			//
 			defaultRequest.setQ(KeyWord.GET_PEERS);
-			defaultRequest.setA(BenCodeUtils.to(KeyWord.ID, localId.getBytes(KeyWord.DHT_CHARSET), KeyWord.INFO_HASH,
-					randomTargetId(localId).getBytes(KeyWord.DHT_CHARSET)));
+			defaultRequest.setA(BenCodeUtils.to(KeyWord.ID, localId, KeyWord.INFO_HASH,hash));
 			//
 			return defaultRequest;
 
@@ -71,17 +69,8 @@ public class MessageFactory {
 			return null;
 		}
 	}
-	
-	public static KrpcMessage createD9Request(int piece , String ip , int port) {
 
-		try {
-			D9Request defaultRequest = new D9Request(new InetSocketAddress(ip, port), piece);
-			return defaultRequest;
 
-		} catch (Exception e) {
-			return null;
-		}
-	}
 
 	/**
 	 * 根据一个节点id随机获取一个目标节点id, 如果每次都只根据自身的节点id进行find_node操作很容易就会遍历完所有的节点导致无节点可遍历,
