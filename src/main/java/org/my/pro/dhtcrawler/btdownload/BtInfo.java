@@ -52,7 +52,7 @@ public class BtInfo {
 			files.clear();
 			//
 
-			Map<String, BEncodedValue> info = value.getMap().get("info").getMap();
+			Map<String, BEncodedValue> info = value.getMap();
 
 			name = null;
 			if (info.containsKey("name.utf-8")) {

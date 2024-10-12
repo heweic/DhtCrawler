@@ -4,7 +4,6 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
@@ -31,8 +30,6 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.MessageToMessageDecoder;
-import io.netty.util.CharsetUtil;
 
 /**
  * 磁力链接转种子
@@ -122,6 +119,13 @@ public class TryDownloadBt {
 
 		private int ut_metadata = 0;;
 
+		/**
+		 * 元数据有多少块
+		 */
+		private int blockSize;
+
+		private boolean isBlockFirst = true;
+
 		@Override
 		protected void channelRead0(ChannelHandlerContext ctx, ByteBuf bf) throws Exception {
 
@@ -166,56 +170,132 @@ public class TryDownloadBt {
 					System.out.println(bv.getMap().get("m").getMap().get("ut_metadata").getInt());
 					ut_metadata = bv.getMap().get("m").getMap().get("ut_metadata").getInt();
 					metadata_size = bv.getMap().get("metadata_size").getInt();
+					blockSize = (int) Math.ceil((double) metadata_size / (16 << 10));
+
 					System.out.println(bv.getMap().get("metadata_size").getInt());
 					// System.out.println("-------" + bf.readableBytes());
 					//
 					sendHandshakeMsg(ctx);
 //					// 分片请求种子
 					if (ut_metadata != 0 && metadata_size != 0) {
-						sendMetadataRequest(ctx);
+						// 请求第一块数据
+						sendMetadataRequest(ctx, 0);
 					}
 
 				}
 			} else {
-				if(null == bt) {
+				if (null == bt) {
 					bt = Unpooled.buffer();
-					bf.readInt();
-					byte pid = bf.readByte();
-					byte dataType = bf.readByte();
-					System.out.println("metadata_size:" + metadata_size);
-					//System.out.println("tmp:" + );
-					//System.out.println(tmp);
 				}
 
+				// 如果是分块数据的第一个包
+				if (isBlockFirst) {
+					
+					blockLeftSize = bf.readInt();
+					//nowBlockSize = blockLeftSize;
+					
+					System.out.println("blockLeftSize" + blockLeftSize);
+					byte pid = bf.readByte();
+					byte dataType = bf.readByte();
+					
+					blockLeftSize = blockLeftSize - 2;
+					
+					
+					
+					byte[] data = new byte[bf.readableBytes()];
+					bf.readBytes(data);
+					// 块++
+					nextPiece++;
+					// 重置计数器
+			
+
+					BEncodedValue benData = BDecoder.bdecode(ByteBuffer.wrap(data));
+					//int nowPiece = benData.getMap().get("piece").getInt();
+					// 将row_metadata_piece 加入bt
+					int dataLength = BEncoder.encode(benData.getMap()).array().length;
+					
+					byte[] rowMetaData = new byte[data.length - dataLength];
+					System.arraycopy(data, dataLength, rowMetaData, 0, rowMetaData.length);
+					
+					//ByteBuf rowMetaData = Unpooled.buffer();
+					
+					
+					bt.writeBytes(rowMetaData);
+
+					blockLeftSize = blockLeftSize - data.length;
+					//
+					isBlockFirst = false;
+				} else {
+					byte[] data = new byte[bf.readableBytes()];
+					bf.readBytes(data);
+					// 当前块未填充完成
+					bt.writeBytes(data);
+					blockLeftSize = blockLeftSize - data.length;
+				}
+				System.out.println("bt size" + bt.readableBytes() + "剩余" + blockLeftSize);
+			
+				if (blockLeftSize <= 0) {
+					// 块填充完成，请求下一块数据
+					isBlockFirst = true;
+				}
+				if (blockLeftSize <= 0 && nextPiece > 0 && nextPiece < blockSize) {
+					sendMetadataRequest(ctx, nextPiece);
 				
-				byte[] data = new byte[bf.readableBytes()];
-				bf.readBytes(data);
-				//System.out.println(new String(data));
-				bt.writeBytes(data);
-				if(bt.readableBytes() >= metadata_size) {
+				}
+				if (blockLeftSize <= 0 && nextPiece == blockSize) {
 					
-					
-					//
-					int cha = bt.readableBytes() - metadata_size;
-					System.out.println("满了" + bt.readableBytes() + "差:" + cha);
-					//
+					System.out.println("下载完成");
+					// 数组组装完成
 					byte[] fullData = new byte[bt.readableBytes()];
 					bt.readBytes(fullData);
-					BEncodedValue value = BDecoder.bdecode(ByteBuffer.wrap(fullData));
-					System.out.println(GsonUtils.toJsonString(value));
-					System.out.println(GsonUtils.toJsonString(new BtInfo(value, ByteArrayHexUtils.byteArrayToHexString(infoHash))));
-					FileUtils.writeByteArrayToFile(new File("D:\\out.txt"), fullData, false);
+					
+					
+					BEncodedValue pieceInfo = BDecoder.bdecode(ByteBuffer.wrap(fullData));
+					BEncodedValue files = pieceInfo.getMap().get("files");
+					//files.get
+					for(BEncodedValue file: files.getList()) {
+						 Map<String,BEncodedValue> map =   file.getMap();
+						 
+						// System.out.println(map.get("path").getString());
+						try {
+							//@TODO 解析文件列表，path.utf-8 path 可能是个文件夹
+							
+							 System.out.println(map.get("ed2k").getString("utf-8"));
+							 System.out.println(map.get("length").getInt());
+							 System.out.println(map.get("path").getString());
+						}catch (Exception e) {
+							// TODO: handle exception
+						}
+						// System.out.println(map.get("path.utf-8").getString());
+					}
+					
+//					byte[] rsData = files.getBytes();
+//					System.out.println(rsData.length);
+//					FileUtils.writeByteArrayToFile(new File("D:\\out.txt"), rsData);
+					//pieceInfo
+				//	BtInfo rs = new BtInfo(btInfo.getMap().get("files"), "");
+					//BtInfo
+				//	System.out.println(GsonUtils.toJsonString(pieceInfo));
+
 				}
-				
-				
-				//
-				//System.out.println();
 
 			}
 		}
-	//	private int tmp;
+
+		// private int tmp;
 		private ByteBuf bt = null;
-		
+
+		/**
+		 * 当前第几块
+		 */
+		private int nextPiece = 0;
+		/**
+		 * 当前快剩余
+		 */
+		//private int nowPieceSub = 16 << 10;
+		//剩余块大小
+		private int blockLeftSize;
+
 		public void sendHandshakeMsg(ChannelHandlerContext ctx) throws Exception {
 
 			BEncodedValue ut_metadata = BenCodeUtils.to("ut_metadata", 1);
@@ -239,34 +319,28 @@ public class TryDownloadBt {
 		}
 
 //
-		private void sendMetadataRequest(ChannelHandlerContext ctx) throws Exception {
+		private void sendMetadataRequest(ChannelHandlerContext ctx, int piece) throws Exception {
 
-			int blockSize = (int) Math.ceil((double) metadata_size / (16 << 10));
+			Map<String, BEncodedValue> map = new HashMap<>();
+			map.put("msg_type", new BEncodedValue(0));
+			map.put("piece", new BEncodedValue(piece));
+			BEncodedValue metadata = new BEncodedValue(map);
 
-			for (int i = 0; i < blockSize; i++) {
-				Map<String, BEncodedValue> map = new HashMap<>();
-				map.put("msg_type", new BEncodedValue(0));
-				map.put("piece", new BEncodedValue(i));
-				BEncodedValue metadata = new BEncodedValue(map);
+			ByteBuffer sendMetadataRequest = BEncoder.encode(metadata.getMap());
 
-				ByteBuffer sendMetadataRequest = BEncoder.encode(metadata.getMap());
+			ByteBuf extendedHandshake = Unpooled.buffer(2 + sendMetadataRequest.array().length + 4);
+			extendedHandshake.writeInt(2 + sendMetadataRequest.array().length);
+			extendedHandshake.writeByte(20); // BT_MSG_ID = 20（扩展协议消息）
+			extendedHandshake.writeByte(ut_metadata); // EXT_MSG_ID = 0（扩展握手消息）
+			extendedHandshake.writeBytes(sendMetadataRequest);
 
-				ByteBuf extendedHandshake = Unpooled.buffer(2 + sendMetadataRequest.array().length + 4);
-				extendedHandshake.writeInt(2 + sendMetadataRequest.array().length);
-				extendedHandshake.writeByte(20); // BT_MSG_ID = 20（扩展协议消息）
-				extendedHandshake.writeByte(ut_metadata); // EXT_MSG_ID = 0（扩展握手消息）
-				extendedHandshake.writeBytes(sendMetadataRequest);
-
-				System.out.println("发送分片消息:" + new String(extendedHandshake.array()));
-				ctx.writeAndFlush(extendedHandshake);
-
-			}
+			System.out.println("发送分片消息:" + new String(extendedHandshake.array()));
+			ctx.writeAndFlush(extendedHandshake);
 
 		}
 
 	}
-	
-	
+
 	public static void main(String[] args) throws InterruptedException {
 		String ip = "176.9.137.195"; // 目标IP
 		int port = 37040; // 目标端口
