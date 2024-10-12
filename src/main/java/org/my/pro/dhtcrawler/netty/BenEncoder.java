@@ -14,23 +14,19 @@ import io.netty.handler.codec.MessageToByteEncoder;
 public class BenEncoder extends MessageToByteEncoder<KrpcMessage> {
 
 	private static Log log = LogFactory.getLog(BenEncoder.class);
+
 	@Override
 	protected void encode(ChannelHandlerContext ctx, KrpcMessage msg, ByteBuf out) throws Exception {
-
+		byte[] bs = null;
 		try {
-			byte[] bs = null;
-			try {
-				bs = msg.toByteArray();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			//
-			if (null != bs) {
-				//log.info("发送消息:" + msg.addr()  + GsonUtils.toJsonString(msg));
-				ctx.writeAndFlush(new DatagramPacket(Unpooled.wrappedBuffer(bs), msg.addr()));
-			}
-		}catch (Exception e) {
-			// TODO: handle exception
+			bs = msg.toByteArray();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		//
+		if (null != bs) {
+			// log.info("发送消息:" + msg.addr() + GsonUtils.toJsonString(msg));
+			ctx.writeAndFlush(new DatagramPacket(Unpooled.wrappedBuffer(bs), msg.addr()));
 		}
 	}
 

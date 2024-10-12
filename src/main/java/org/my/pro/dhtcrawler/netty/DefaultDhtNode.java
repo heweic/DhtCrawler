@@ -6,6 +6,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.my.pro.dhtcrawler.AbstractDhtNode;
 import org.my.pro.dhtcrawler.KrpcMessage;
+import org.my.pro.dhtcrawler.util.ByteArrayHexUtils;
 import org.my.pro.dhtcrawler.util.GsonUtils;
 
 import io.netty.bootstrap.Bootstrap;
@@ -72,7 +73,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 					channelFuture = bootstrap.bind(port()).sync();
 					channelFuture.addListener(future -> {
 						if (future.isSuccess()) {
-							log.info("启动节点:" + GsonUtils.GSON.toJson(id()) + "-" + channelFuture.channel().localAddress());
+							log.info("启动节点:" + GsonUtils.GSON.toJson(id()) + "-" + channelFuture.channel().localAddress() +"-" + ByteArrayHexUtils.byteArrayToHexString(id()));
 						} else {
 							log.info("启动节点:" + GsonUtils.GSON.toJson(id()) + "-" + port() + "失败!");
 						}

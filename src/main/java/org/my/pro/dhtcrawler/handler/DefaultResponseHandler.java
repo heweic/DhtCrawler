@@ -60,7 +60,7 @@ public class DefaultResponseHandler extends ResponseMessageHandler {
 					if (!routingTable.has(info.nodeId().intId())) {
 
 						KrpcMessage Get_peers = MessageFactory.createGet_peers(info.ip(), info.port(), dhtNode.id(),
-								ByteArrayHexUtils.hexStringToByteArray("950e7fcf8d5269f412e2f5cf71b28f8b83c377b1"));
+								ByteArrayHexUtils.hexStringToByteArray("fe398bcb9f127804ba9afcbee934303496487428"));
 						dhtNode.sendMessage(Get_peers);
 					}
 					routingTable.add(info);

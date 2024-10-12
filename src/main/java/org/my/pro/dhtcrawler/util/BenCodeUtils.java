@@ -1,12 +1,14 @@
 package org.my.pro.dhtcrawler.util;
 
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.my.pro.dhtcrawler.exception.IdErroException;
 
 import be.adaxisoft.bencode.BEncodedValue;
+import be.adaxisoft.bencode.BEncoder;
 
 public class BenCodeUtils {
 
@@ -15,6 +17,24 @@ public class BenCodeUtils {
 		Map<String, BEncodedValue> map = new HashMap<>();
 
 		map.put(key, new BEncodedValue(bs));
+
+		return new BEncodedValue(map);
+	}
+
+	public static BEncodedValue to(String key, int value) throws Exception {
+
+		Map<String, BEncodedValue> map = new HashMap<>();
+
+		map.put(key, new BEncodedValue(value));
+
+		return new BEncodedValue(map);
+	}
+
+	public static BEncodedValue to(String key, BEncodedValue bEncodedValue) throws Exception {
+
+		Map<String, BEncodedValue> map = new HashMap<>();
+
+		map.put(key, bEncodedValue);
 
 		return new BEncodedValue(map);
 	}
@@ -29,7 +49,7 @@ public class BenCodeUtils {
 		return new BEncodedValue(map);
 	}
 
-	public static BigInteger id(byte[] bs) throws Exception{
+	public static BigInteger id(byte[] bs) throws Exception {
 		if (bs.length != 20) {
 			throw new IdErroException();
 		}
@@ -56,11 +76,11 @@ public class BenCodeUtils {
 		return binIP;
 	}
 
-	public static void main(String[] args) {
-		BigInteger bigInteger1 = new BigInteger("12345678911234567891");
-		BigInteger bigInteger2 = new BigInteger("13345678911234567891");
-
-		System.out.println(bigInteger1.compareTo(bigInteger2));
+	public static void main(String[] args) throws Exception {
+	byte[] HANDSHAKE_BYTES = { 19, 66, 105, 116, 84, 111, 114, 114, 101, 110, 116, 32, 112, 114,
+				111, 116, 111, 99, 111, 108, 0, 0, 0, 0, 0, 16, 0, 1 };
+	System.out.println(new String(HANDSHAKE_BYTES));
+		
 	}
 
 }

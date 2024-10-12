@@ -24,14 +24,14 @@ public class BenDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
 		try {
 			ByteBuf buf = msg.content();
-
 			int read = buf.readableBytes();
-			byte[] bs = new byte[read];
-
-			buf.readBytes(bs);
-
-			BEncodedValue bv = BDecoder.decode(new AutoCloseInputStream(new ByteArrayInputStream(bs)));
-
+			byte[] bytes = new byte[read];
+			buf.readBytes(bytes);
+			
+			
+			
+			//bencode
+			BEncodedValue bv = BDecoder.decode(new AutoCloseInputStream(new ByteArrayInputStream(bytes)));
 			String messageType = bv.getMap().get(KeyWord.Y).getString();
 			String transactionID = bv.getMap().get(KeyWord.T).getString();
 			InetSocketAddress addr = msg.sender();
