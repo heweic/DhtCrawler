@@ -3,6 +3,7 @@ package org.my.pro.dhtcrawler.btdownload;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
 import org.my.pro.dhtcrawler.util.GsonUtils;
@@ -23,7 +24,9 @@ public class Test {
 			
 			//System.out.println("剩余待解析:" + (bs.length - BEncoder.encode(bEncodedValue.getMap()).array().length));
 			
-			System.out.println("gson:"+GsonUtils.toJsonString(bEncodedValue));
+			BtInfo btInfo = new BtInfo(bEncodedValue, "12222333");
+			
+			System.out.println(GsonUtils.toJsonString(btInfo));
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block

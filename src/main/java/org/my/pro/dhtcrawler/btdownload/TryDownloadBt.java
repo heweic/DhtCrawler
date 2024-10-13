@@ -158,8 +158,9 @@ public class TryDownloadBt {
 				bf.readBytes(20);// 对方peerID
 
 				if (bf.readableBytes() > 68) {
-					bf.readBytes(6);// 未知内容
-
+					bf.readInt(); //message length
+					bf.readByte();//message type
+					bf.readByte();//message byte
 					//
 					byte[] value = new byte[bf.readableBytes() - 68 - 6];
 
