@@ -2,15 +2,21 @@ package org.my.pro.dhtcrawler.btdownload;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.input.AutoCloseInputStream;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.my.pro.dhtcrawler.util.BenCodeUtils;
 import org.my.pro.dhtcrawler.util.ByteArrayHexUtils;
+import org.my.pro.dhtcrawler.util.GsonUtils;
 import org.my.pro.dhtcrawler.util.NodeIdRandom;
 
 import be.adaxisoft.bencode.BDecoder;
@@ -19,6 +25,7 @@ import be.adaxisoft.bencode.BEncoder;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -33,6 +40,18 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
  * @author hew 使用BEP09扩展协议，创建与peer TCP连接 根据协议内容，发送握手包，协商，分块请求种子元数据
  */
 public class Bep09MetadataFiles {
+
+	private static Log log = LogFactory.getLog(Bep09MetadataFiles.class);
+	private static String canonicalPath;
+
+	static {
+		try {
+			canonicalPath = new File("").getCanonicalPath();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
 	/**
 	 * 握手消息长度
 	 */
@@ -73,15 +92,40 @@ public class Bep09MetadataFiles {
 	 * 默认标记握手请求
 	 */
 	private volatile AtomicBoolean isHandShack = new AtomicBoolean(true);
+	private CountDownLatch isDownload = new CountDownLatch(1);
 
-	public void tryDownload() {
+	private NioEventLoopGroup group;
+	private Channel clientChannel;
+
+	public boolean get() {
+		try {
+			isDownload.await(5, TimeUnit.SECONDS);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		boolean isDown = new File(canonicalPath + "/torrent/" + ByteArrayHexUtils.byteArrayToHexString(hash)).exists();
+		if (!isDown) {
+			if (null != clientChannel) {
+				clientChannel.close();
+			}
+			if (null != group) {
+				group.shutdownGracefully();
+			}
+		}
+		return isDown;
+	}
+
+	public void tryDownload() throws Exception{
 		// 使用netty发起tcp连接到peer
-		NioEventLoopGroup group = new NioEventLoopGroup();
+		group = new NioEventLoopGroup();
 		try {
 			Bootstrap bootstrap = new Bootstrap();
 
 			bootstrap.group(group).channel(NioSocketChannel.class).option(ChannelOption.SO_KEEPALIVE, true)
-					.option(ChannelOption.SO_RCVBUF, 1024 * 500).handler(new ChannelInitializer<SocketChannel>() {
+					.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 2000).option(ChannelOption.SO_RCVBUF, 1024 * 500)
+					.handler(new ChannelInitializer<SocketChannel>() {
 
 						@Override
 						protected void initChannel(SocketChannel ch) throws Exception {
@@ -92,12 +136,18 @@ public class Bep09MetadataFiles {
 			//
 
 			ChannelFuture channelFuture = bootstrap.connect(peerIp, peerPort).sync();
+			channelFuture.addListener(future -> {
+				if (future.isSuccess()) {
+					log.info("连接到" + peerIp + "：" + peerPort + "下载:" + hash);
+				}
+			});
+			clientChannel = channelFuture.channel();
 			//
 
 			channelFuture.channel().closeFuture().await();
 		} catch (Exception e) {
-			// TODO: handle exception
-
+			isDownload.countDown();
+			throw e;
 		} finally {
 			group.shutdownGracefully();
 		}
@@ -120,7 +170,7 @@ public class Bep09MetadataFiles {
 		public void channelRead0(ChannelHandlerContext ctx, ByteBuf bf) throws Exception {
 
 			if (isHandShack.get()) {
-				System.out.println("处握手理wo'sh" + Thread.currentThread().getName());
+
 				bf.readByte();
 				bf.readBytes(19);// 协议
 				bf.readBytes(8);// 8字节占位
@@ -133,18 +183,25 @@ public class Bep09MetadataFiles {
 				BitTorrent bt = new BitTorrent();
 
 				bt.setLength(bf.readInt());
+				//仅仅解析BEP09协议中 种子元数据部分
 				bt.setType(bf.readByte());
-				// 仅仅解析BEP09协议中 种子元数据部分
-				bt.setId(bf.readByte());
+				if(bt.getType() == 20) {
+					bt.setId(bf.readByte());
 
-				byte[] dictionary = new byte[bt.getLength() - 2];
-				bf.readBytes(dictionary);
-				BEncodedValue bv = BDecoder.decode(new AutoCloseInputStream(new ByteArrayInputStream(dictionary)));
+					byte[] dictionary = new byte[bt.getLength() - 2];
+					bf.readBytes(dictionary);
+					BEncodedValue bv = BDecoder.decode(new AutoCloseInputStream(new ByteArrayInputStream(dictionary)));
 
-				// 关注ut_metadata及metadata_size
-				ut_metadata = bv.getMap().get("m").getMap().get("ut_metadata").getInt();
-				metadata_size = bv.getMap().get("metadata_size").getInt();
-				blockSize = (int) Math.ceil((double) metadata_size / (16 << 10));
+					// 关注ut_metadata及metadata_size
+					ut_metadata = bv.getMap().get("m").getMap().get("ut_metadata").getInt();
+					metadata_size = bv.getMap().get("metadata_size").getInt();
+					blockSize = (int) Math.ceil((double) metadata_size / (16 << 10));
+				}else {
+					//跳过
+					bf.readBytes(bt.getLength() - 1);
+				}
+				// 
+				
 
 				//
 				isHandShack.set(false);
@@ -165,9 +222,9 @@ public class Bep09MetadataFiles {
 	 * 当前获得块数
 	 */
 	private int nowPiece;
-	
+
 	/**
-	 *  完整种子元数据信息
+	 * 完整种子元数据信息
 	 */
 	private ByteBuf fullData = Unpooled.buffer();
 
@@ -193,11 +250,11 @@ public class Bep09MetadataFiles {
 
 			if (!isHandShack.get()) {
 				// 接收分块响应数据
-				int length = bf.readInt();
+				bf.readInt();
 				bf.readByte();// messageType
 				bf.readByte();// messageID
 
-				System.out.println(length + ".....,.,." + bf.readableBytes());
+				// System.out.println(length + ".....,.,." + bf.readableBytes());
 
 				byte[] data = new byte[bf.readableBytes()];
 				bf.readBytes(data);
@@ -211,8 +268,7 @@ public class Bep09MetadataFiles {
 				System.arraycopy(data, dataLength, rowMetaData, 0, rowMetaData.length);
 
 				fullData.writeBytes(rowMetaData);
-				
-				
+
 				// 判断是否请求块
 				nowPiece++;
 				if (nowPiece < blockSize) {
@@ -221,7 +277,12 @@ public class Bep09MetadataFiles {
 					// 下载完成
 					byte[] fulbs = new byte[fullData.readableBytes()];
 					fullData.readBytes(fulbs);
-					FileUtils.writeByteArrayToFile(new File("D:\\out.txt"), fulbs, true);
+					FileUtils.writeByteArrayToFile(
+							new File(canonicalPath + "/torrent/" + ByteArrayHexUtils.byteArrayToHexString(hash)), fulbs,
+							true);
+
+					isDownload.countDown();
+
 					ctx.close();
 				}
 			}
@@ -322,12 +383,21 @@ public class Bep09MetadataFiles {
 	}
 
 	public static void main(String[] args) {
-		String ip = "176.9.137.195"; // 目标IP
-		int port = 37040; // 目标端口
-		byte[] infoHash = ByteArrayHexUtils.hexStringToByteArray("fe398bcb9f127804ba9afcbee934303496487428");
+		//开始尝试下载:14.19.153.191:22223-6972a67a6990b5adb03b8351ddf02ecf4f3458dc
+		//2024-10-14 18:01:56,202 [org.my.pro.dhtcrawler.btdownload.Bep09MetadataFiles]-[INFO] 连接到14.19.153.191：22223下载:[B@4980efac
+		String ip = "14.19.153.191"; // 目标IP
+		int port = 22223; // 目标端口
+		byte[] infoHash = ByteArrayHexUtils.hexStringToByteArray("6972a67a6990b5adb03b8351ddf02ecf4f3458dc");
 		Bep09MetadataFiles bep09MetadataFiles = new Bep09MetadataFiles(infoHash, NodeIdRandom.generatePeerId(), ip,
 				port);
 
-		bep09MetadataFiles.tryDownload();
+		try {
+			bep09MetadataFiles.tryDownload();
+		}catch (Exception e) {
+			e.printStackTrace();
+			// TODO: handle exception
+		}
+		System.out.println(bep09MetadataFiles.get());
+		
 	}
 }

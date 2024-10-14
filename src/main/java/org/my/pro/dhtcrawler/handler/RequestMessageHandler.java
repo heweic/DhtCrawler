@@ -9,9 +9,7 @@ import org.my.pro.dhtcrawler.RoutingTable;
 public abstract class RequestMessageHandler extends AbstractMessageHandler {
 
 	public RequestMessageHandler(RoutingTable routingTable, LocalDHTNode dhtNode) {
-		super(routingTable, dhtNode);
+		super(dhtNode);
 	}
-
-	
 
 }

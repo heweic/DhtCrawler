@@ -1,10 +1,8 @@
 package org.my.pro.dhtcrawler.handler;
 
-import java.math.BigInteger;
-
-import org.my.pro.dhtcrawler.LocalDHTNode;
 import org.my.pro.dhtcrawler.KeyWord;
 import org.my.pro.dhtcrawler.KrpcMessage;
+import org.my.pro.dhtcrawler.LocalDHTNode;
 import org.my.pro.dhtcrawler.RoutingTable;
 import org.my.pro.dhtcrawler.WorkHandler;
 import org.my.pro.dhtcrawler.message.DefaultRequest;
@@ -34,12 +32,13 @@ public class AnnouncePeerHandler extends RequestMessageHandler {
 	}
 
 	@Override
-	public KrpcMessage handler0(BigInteger id, KrpcMessage message) throws Exception {
+	public KrpcMessage handler0(KrpcMessage message) throws Exception {
 
 		if (message instanceof DefaultRequest) {
 			DefaultRequest defaultRequest = (DefaultRequest) message;
-			
-			String code = ByteArrayHexUtils.byteArrayToHexString(defaultRequest.a().getMap().get(KeyWord.INFO_HASH).getBytes());
+
+			String code = ByteArrayHexUtils
+					.byteArrayToHexString(defaultRequest.a().getMap().get(KeyWord.INFO_HASH).getBytes());
 
 			String mes = message.addr().getAddress().getHostAddress() + "下载端口:"
 					+ defaultRequest.a().getMap().get("port").getInt() + "种子hash:" + code;
@@ -51,7 +50,7 @@ public class AnnouncePeerHandler extends RequestMessageHandler {
 		}
 
 		DefaultResponse defaultResponse = new DefaultResponse(message.t(), message.addr());
-		defaultResponse.setR(BenCodeUtils.to(KeyWord.ID, dhtNode.id()));
+		defaultResponse.setR(BenCodeUtils.to(KeyWord.ID, localNode.id()));
 		//
 		return defaultResponse;
 	}

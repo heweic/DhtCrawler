@@ -1,6 +1,5 @@
 package org.my.pro.dhtcrawler.util;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,14 +7,13 @@ import org.apache.commons.lang3.RandomUtils;
 import org.my.pro.dhtcrawler.KeyWord;
 
 public class NodeIdRandom {
-	
-	
+
 	public static byte[] generatePeerId() {
 		// 生成随机的peer_id
 		byte[] peerId = new byte[20];
-		String prefix = "-NETTY001-";
-		System.arraycopy(prefix.getBytes(StandardCharsets.US_ASCII), 0, peerId, 0, prefix.length());
-		for (int i = prefix.length(); i < 20; i++) {
+//		String prefix = "-NETTY001-";
+//		System.arraycopy(prefix.getBytes(StandardCharsets.US_ASCII), 0, peerId, 0, prefix.length());
+		for (int i = 0; i < 20; i++) {
 			peerId[i] = (byte) (Math.random() * 255);
 		}
 		return peerId;

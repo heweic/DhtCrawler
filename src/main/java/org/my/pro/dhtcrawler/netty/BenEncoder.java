@@ -25,7 +25,7 @@ public class BenEncoder extends MessageToByteEncoder<KrpcMessage> {
 		}
 		//
 		if (null != bs) {
-			// log.info("发送消息:" + msg.addr() + GsonUtils.toJsonString(msg));
+			//log.info("发送消息:" + msg.addr() + GsonUtils.toJsonString(msg));
 			ctx.writeAndFlush(new DatagramPacket(Unpooled.wrappedBuffer(bs), msg.addr()));
 		}
 	}

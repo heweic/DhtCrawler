@@ -1,13 +1,12 @@
 package org.my.pro.dhtcrawler.handler;
 
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.List;
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.my.pro.dhtcrawler.LocalDHTNode;
 import org.my.pro.dhtcrawler.KeyWord;
 import org.my.pro.dhtcrawler.KrpcMessage;
+import org.my.pro.dhtcrawler.LocalDHTNode;
 import org.my.pro.dhtcrawler.NodeInfo;
 import org.my.pro.dhtcrawler.RoutingTable;
 import org.my.pro.dhtcrawler.WorkHandler;
@@ -43,17 +42,17 @@ public class GetPeersHandler extends RequestMessageHandler {
 	}
 
 	@Override
-	public KrpcMessage handler0(BigInteger id, KrpcMessage message) throws Exception {
+	public KrpcMessage handler0(KrpcMessage message) throws Exception {
 		if (message instanceof DefaultRequest) {
 			//
 			DefaultRequest defaultRequest = (DefaultRequest) message;
 
 			byte[] bs = defaultRequest.a().getMap().get(KeyWord.INFO_HASH).getBytes();
-			BigInteger bigInteger = new BigInteger(bs);
 
 			String code = ByteArrayHexUtils.byteArrayToHexString(bs);
-			
-			logger.info("{  " + dhtNode.port() + "  }  " + code + "{ " +message.addr().getAddress().getHostAddress() + ":" + message.addr().getPort() + " }");
+
+			logger.info("{  " + localNode.port() + "  }  " + code + "{ " + message.addr().getAddress().getHostAddress()
+					+ ":" + message.addr().getPort() + " }");
 
 			if (null != handler) {
 				handler.handler(code, message);
@@ -61,7 +60,7 @@ public class GetPeersHandler extends RequestMessageHandler {
 
 			// printMagnet(new String(bs, KeyWord.DHT_CHARSET), "GetPeersHandler");
 			//
-			List<NodeInfo> result = routingTable.findNearest(bigInteger);
+			List<NodeInfo> result = localNode.findNearest();
 
 			ByteBuffer buffer = ByteBuffer.allocate(26 * result.size());
 
@@ -71,10 +70,10 @@ public class GetPeersHandler extends RequestMessageHandler {
 
 			DefaultResponse defaultResponse = new DefaultResponse(message.t(), message.addr());
 			try {
-				BEncodedValue r = BenCodeUtils.to(KeyWord.ID, dhtNode.id(), KeyWord.NODES, buffer.array());
+				BEncodedValue r = BenCodeUtils.to(KeyWord.ID, localNode.id(), KeyWord.NODES, buffer.array());
 				r.getMap().put(KeyWord.TOKEN, new BEncodedValue(RandomStringUtils.random(6)));
 				defaultResponse.setR(r);
-			}catch (Exception e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 			//

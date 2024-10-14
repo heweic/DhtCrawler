@@ -1,12 +1,11 @@
 package org.my.pro.dhtcrawler.handler;
 
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-import org.my.pro.dhtcrawler.LocalDHTNode;
 import org.my.pro.dhtcrawler.KeyWord;
 import org.my.pro.dhtcrawler.KrpcMessage;
+import org.my.pro.dhtcrawler.LocalDHTNode;
 import org.my.pro.dhtcrawler.NodeInfo;
 import org.my.pro.dhtcrawler.RoutingTable;
 import org.my.pro.dhtcrawler.message.DefaultRequest;
@@ -28,16 +27,15 @@ public class FindNodeHandler extends RequestMessageHandler {
 	}
 
 	@Override
-	public KrpcMessage handler0(BigInteger id, KrpcMessage message) throws Exception {
+	public KrpcMessage handler0(KrpcMessage message) throws Exception {
 
 		if (message instanceof DefaultRequest) {
 			//
-			DefaultRequest defaultRequest = (DefaultRequest) message;
+			//DefaultRequest defaultRequest = (DefaultRequest) message;
+			//byte[] bs = defaultRequest.a().getMap().get(KeyWord.TARGET).getBytes();
 
-			byte[] bs = defaultRequest.a().getMap().get(KeyWord.TARGET).getBytes();
-			BigInteger bigInteger = new BigInteger(bs);
 			//
-			List<NodeInfo> result = routingTable.findNearest(bigInteger);
+			List<NodeInfo> result = localNode.findNearest();
 
 			ByteBuffer buffer = ByteBuffer.allocate(26 * result.size());
 
@@ -46,7 +44,7 @@ public class FindNodeHandler extends RequestMessageHandler {
 			}
 
 			DefaultResponse defaultResponse = new DefaultResponse(message.t(), message.addr());
-			defaultResponse.setR(BenCodeUtils.to(KeyWord.ID, dhtNode.id(), KeyWord.NODES, buffer.array()));
+			defaultResponse.setR(BenCodeUtils.to(KeyWord.ID, localNode.id(), KeyWord.NODES, buffer.array()));
 
 			//
 			return defaultResponse;

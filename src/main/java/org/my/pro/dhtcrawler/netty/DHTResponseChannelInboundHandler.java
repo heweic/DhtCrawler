@@ -1,13 +1,9 @@
 package org.my.pro.dhtcrawler.netty;
 
-import java.math.BigInteger;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.my.pro.dhtcrawler.KeyWord;
 import org.my.pro.dhtcrawler.handler.ResponseMessageHandler;
 import org.my.pro.dhtcrawler.message.DefaultResponse;
-import org.my.pro.dhtcrawler.util.BenCodeUtils;
 import org.my.pro.dhtcrawler.util.GsonUtils;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -30,10 +26,11 @@ public class DHTResponseChannelInboundHandler extends SimpleChannelInboundHandle
 			DefaultResponse response = (DefaultResponse) msg;
 			//
 
-	//		log.info("收到消息:"+ msg.r()+"-"  + msg.addr() + GsonUtils.toJsonString(msg));
+	//		log.info("DefaultResponse收到消息-" + GsonUtils.toJsonString(msg));
 
-			BigInteger id = BenCodeUtils.id(response.r().getMap().get(KeyWord.ID).getBytes());
-			responseMessageHandler.handler(id, response);
+			// BigInteger id =
+			// BenCodeUtils.id(response.r().getMap().get(KeyWord.ID).getBytes());
+			responseMessageHandler.handler(response);
 
 		} catch (Exception e) {
 			try {

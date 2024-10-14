@@ -1,10 +1,8 @@
 package org.my.pro.dhtcrawler.handler;
 
-import java.math.BigInteger;
-
-import org.my.pro.dhtcrawler.LocalDHTNode;
 import org.my.pro.dhtcrawler.KeyWord;
 import org.my.pro.dhtcrawler.KrpcMessage;
+import org.my.pro.dhtcrawler.LocalDHTNode;
 import org.my.pro.dhtcrawler.RoutingTable;
 import org.my.pro.dhtcrawler.message.DefaultResponse;
 import org.my.pro.dhtcrawler.util.BenCodeUtils;
@@ -17,17 +15,16 @@ import org.my.pro.dhtcrawler.util.BenCodeUtils;
  */
 public class PingHandler extends RequestMessageHandler {
 
-
 	public PingHandler(RoutingTable routingTable, LocalDHTNode dhtNode) {
 		super(routingTable, dhtNode);
 	}
 
 	@Override
-	public KrpcMessage handler0(BigInteger id, KrpcMessage message) throws Exception {
+	public KrpcMessage handler0(KrpcMessage message) throws Exception {
 		//
 		DefaultResponse defaultResponse = new DefaultResponse(message.t(), message.addr());
 
-		defaultResponse.setR(BenCodeUtils.to(KeyWord.ID, dhtNode.id()));
+		defaultResponse.setR(BenCodeUtils.to(KeyWord.ID, localNode.id()));
 		//
 		return defaultResponse;
 	}

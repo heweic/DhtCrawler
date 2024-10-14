@@ -46,7 +46,7 @@ public class BenDecoder extends MessageToMessageDecoder<DatagramPacket> {
 				//
 				defaultResponse.setR(bv.getMap().get(KeyWord.R));
 				//
-				out.add((KrpcMessage) defaultResponse);
+				out.add( defaultResponse);
 				break;
 			case KrpcMessage.Q:
 				DefaultRequest defaultRequest = new DefaultRequest(transactionID, addr);
@@ -54,7 +54,7 @@ public class BenDecoder extends MessageToMessageDecoder<DatagramPacket> {
 				defaultRequest.setA(bv.getMap().get(KeyWord.A));
 				defaultRequest.setQ(bv.getMap().get(KeyWord.Q).getString());
 				//
-				out.add((KrpcMessage) defaultRequest);
+				out.add(defaultRequest);
 				break;
 			default:
 				break;

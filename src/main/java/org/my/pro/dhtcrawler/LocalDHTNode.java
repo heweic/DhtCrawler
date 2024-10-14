@@ -1,5 +1,7 @@
 package org.my.pro.dhtcrawler;
 
+import java.util.List;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 
@@ -8,10 +10,7 @@ import io.netty.channel.ChannelHandler;
  */
 public interface LocalDHTNode {
 
-	/**
-	 * 
-	 */
-	public void setChannelHandler(ChannelHandler channelHandler);
+
 
 	/** 启动 */
 	public void start();
@@ -21,13 +20,11 @@ public interface LocalDHTNode {
 
 	/** 是否在运行 */
 	public boolean isRun();
-	
+
 	/**
 	 * 搜寻持有hash的peer
 	 * 
 	 */
-	 
-	
 
 	/**
 	 * 
@@ -53,5 +50,22 @@ public interface LocalDHTNode {
 	 * 节点端口
 	 */
 	public int port();
+	
+	/**
+	 * 
+	 * @param hash
+	 * @return
+	 */
+	public List<NodeInfo> find_peer(byte[] hash);
+	
+	/**
+	 * 添加节点
+	 */
+	public void add(NodeInfo info);
+	
+	/**
+	 * 
+	 */
+	public List<NodeInfo> findNearest();
 
 }

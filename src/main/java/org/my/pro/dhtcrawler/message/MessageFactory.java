@@ -69,6 +69,20 @@ public class MessageFactory {
 			return null;
 		}
 	}
+	public static KrpcMessage createGet_peers(String ip,String id , int port, byte[] localId , byte[] hash) {
+		try {
+			DefaultRequest defaultRequest = new DefaultRequest(id,
+					new InetSocketAddress(ip, port));
+			//
+			defaultRequest.setQ(KeyWord.GET_PEERS);
+			defaultRequest.setA(BenCodeUtils.to(KeyWord.ID, localId, KeyWord.INFO_HASH,hash));
+			//
+			return defaultRequest;
+
+		} catch (Exception e) {
+			return null;
+		}
+	}
 
 
 
