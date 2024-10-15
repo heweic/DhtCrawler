@@ -8,5 +8,5 @@ public interface WorkHandler {
 	 * @param hash    种子hash
 	 * @param message 消息
 	 */
-	public void handler(String hash, KrpcMessage message);
+	public void handler(byte[] hash, KrpcMessage message);
 }

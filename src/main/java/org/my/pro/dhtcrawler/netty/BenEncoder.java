@@ -3,7 +3,6 @@ package org.my.pro.dhtcrawler.netty;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.my.pro.dhtcrawler.KrpcMessage;
-import org.my.pro.dhtcrawler.util.GsonUtils;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -25,7 +24,7 @@ public class BenEncoder extends MessageToByteEncoder<KrpcMessage> {
 		}
 		//
 		if (null != bs) {
-			//log.info("发送消息:" + msg.addr() + GsonUtils.toJsonString(msg));
+			// log.info("发送消息:" + msg.addr() + GsonUtils.toJsonString(msg));
 			ctx.writeAndFlush(new DatagramPacket(Unpooled.wrappedBuffer(bs), msg.addr()));
 		}
 	}

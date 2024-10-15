@@ -22,12 +22,18 @@ public class RequestIdGenerator {
 //
 //		return localId + "_" + concurrentHashMap.get(localId).incrementAndGet();
 
-		return UUID.randomUUID().toString().replaceAll("-", "");
+		return UUID.randomUUID().toString().replaceAll("-", "").substring(0, 6);
 
 	}
 
 	public static String toLocalId(String tid) {
 		return tid.split("_")[0];
+	}
+
+	public static void main(String[] args) {
+
+		System.out.println(getRequestId());
+		System.out.println(getRequestId());
 	}
 
 }

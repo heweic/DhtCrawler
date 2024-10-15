@@ -3,14 +3,11 @@ package org.my.pro.dhtcrawler;
 import java.util.List;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
 
 /**
  * DHT 节点
  */
 public interface LocalDHTNode {
-
-
 
 	/** 启动 */
 	public void start();
@@ -22,17 +19,26 @@ public interface LocalDHTNode {
 	public boolean isRun();
 
 	/**
-	 * 搜寻持有hash的peer
-	 * 
-	 */
-
-	/**
 	 * 
 	 * 发送消息
 	 * 
 	 * @param krpcMessage
 	 */
 	public void sendMessage(KrpcMessage krpcMessage);
+	/**
+	 * 
+	 * 发送消息
+	 * 
+	 * @param krpcMessage
+	 */
+	public Future call(KrpcMessage krpcMessage);
+	/**
+	 * 
+	 * @param krpcMessage
+	 */
+	public boolean back(KrpcMessage krpcMessage);
+	
+	public void clearTimeOutFutrue();
 
 	/**
 	 * 返回netty Channel
@@ -50,22 +56,16 @@ public interface LocalDHTNode {
 	 * 节点端口
 	 */
 	public int port();
-	
-	/**
-	 * 
-	 * @param hash
-	 * @return
-	 */
-	public List<NodeInfo> find_peer(byte[] hash);
-	
+
 	/**
 	 * 添加节点
 	 */
-	public void add(NodeInfo info);
-	
-	/**
-	 * 
-	 */
-	public List<NodeInfo> findNearest();
+	public void add(Node info);
 
+	/**
+	 * 查询hash附近的节点
+	 */
+	public List<Node> findNearest(byte[] hash);
+
+	public List<Node> randomNodes(int num);
 }

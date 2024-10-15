@@ -6,9 +6,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.my.pro.dhtcrawler.NodeInfo;
+import org.my.pro.dhtcrawler.Node;
 import org.my.pro.dhtcrawler.RoutingTable;
 
 /**
@@ -21,46 +19,22 @@ import org.my.pro.dhtcrawler.RoutingTable;
  */
 public class SimpleRoutingTable implements RoutingTable {
 
-	private Map<String, NodeInfo> nodes = new ConcurrentHashMap<String, NodeInfo>();
+	private Map<String, Node> nodes = new ConcurrentHashMap<String, Node>();
 
-	private static Log log = LogFactory.getLog(SimpleRoutingTable.class);
+	// private static Log log = LogFactory.getLog(SimpleRoutingTable.class);
 
 	public SimpleRoutingTable() {
 
 	}
-	
-	
 
 	@Override
-	public void remove(String id) {
-		nodes.remove(id);
-	}
-
-
-
-	@Override
-	public Map<String, NodeInfo> allNodes() {
-		return nodes;
+	public void removeNode(Node node) {
+		nodes.remove(node.nodeId().toString());
 	}
 
 	@Override
-	public boolean has(String id) {
-		return nodes.containsKey(id);
-	}
-
-	@Override
-	public void add(NodeInfo info) {
+	public void add(Node info) {
 		nodes.put(info.nodeId().id(), info);
-
-	}
-
-	@Override
-	public List<NodeInfo> random(int size) {
-		// 协议要求返回八个可能认识节点
-		if (nodes.size() == 0) {
-			return new ArrayList<NodeInfo>();
-		}
-		return getRandomEntries(8);
 
 	}
 
@@ -70,13 +44,13 @@ public class SimpleRoutingTable implements RoutingTable {
 	 * @param map
 	 * @param count
 	 */
-	private List<NodeInfo> getRandomEntries(int count) {
+	private List<Node> getRandomEntries(int count) {
 
-		List<NodeInfo> reservoir = new ArrayList<NodeInfo>();
+		List<Node> reservoir = new ArrayList<Node>();
 		//
 		Random random = new Random();
 		int i = 0;
-		for (Map.Entry<String, NodeInfo> entry : nodes.entrySet()) {
+		for (Map.Entry<String, Node> entry : nodes.entrySet()) {
 			i++;
 			if (reservoir.size() < count) {
 				reservoir.add(entry.getValue());
@@ -92,12 +66,20 @@ public class SimpleRoutingTable implements RoutingTable {
 	}
 
 	@Override
-	public void nodeActive(String id) {
-		NodeInfo cacheNodeInfo = nodes.get(id);
+	public List<Node> getClosestNodes(byte[] targetId, int count) {
+		return getRandomEntries(count);
+	}
 
-		if (cacheNodeInfo != null) {
-			cacheNodeInfo.refActiveTime();
-		}
+	@Override
+	public List<Node> randomNodes(int num) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public boolean hasNode() {
+		// TODO Auto-generated method stub
+		return false;
 	}
 
 }

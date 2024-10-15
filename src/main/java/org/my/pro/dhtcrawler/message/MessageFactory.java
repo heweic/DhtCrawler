@@ -6,7 +6,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.my.pro.dhtcrawler.KeyWord;
 import org.my.pro.dhtcrawler.KrpcMessage;
-import org.my.pro.dhtcrawler.NodeInfo;
+import org.my.pro.dhtcrawler.Node;
 import org.my.pro.dhtcrawler.util.BenCodeUtils;
 import org.my.pro.dhtcrawler.util.RequestIdGenerator;
 
@@ -25,7 +25,7 @@ public class MessageFactory {
 		return defaultErro;
 	}
 
-	public static KrpcMessage createPing(NodeInfo info, byte[] id) {
+	public static KrpcMessage createPing(Node info, byte[] id) {
 
 		try {
 			DefaultRequest defaultRequest = new DefaultRequest(RequestIdGenerator.getRequestId(),

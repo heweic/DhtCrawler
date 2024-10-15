@@ -1,37 +1,29 @@
 package org.my.pro.dhtcrawler;
 
-import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.my.pro.dhtcrawler.netty.DefaultDhtNode;
-import org.my.pro.dhtcrawler.task.DownLoadBtTorrent;
-import org.my.pro.dhtcrawler.util.DHTNodeIDPartitionGenerator;
+import org.my.pro.dhtcrawler.util.DHTUtils;
 
 public class NodeS {
 
 	public void start(int num) {
 		System.setProperty("file.encoding", KeyWord.DHT_CHARSET_STR);
 
-		int tmp = 70000;
+		int tmp = 60000;
 
-		List<BigInteger> nodeIDs = DHTNodeIDPartitionGenerator.generateDHTNodeIDs(num, num);
-
-
-		
 		for (int i = 0; i < num; i++) {
 
 			int port = tmp + i;
 
-			byte[] id = nodeIDs.get(i).toByteArray();
+			String id = DHTUtils.byteArrayToHexString(DHTUtils.generateNodeId());
+//			System.out.println(id + "----" + id.length());
 			// System.out.println(ByteArrayHexUtils.byteArrayToHexString(id));
 
-			new DefaultDhtNode(id , 0).start();
+			new DefaultDhtNode(DHTUtils.hexStringToByteArray(id), port).start();
 		}
-	
+
 	}
 
 	public static void main(String[] args) {
-		new NodeS().start(10);
+		new NodeS().start(5);
 	}
 }

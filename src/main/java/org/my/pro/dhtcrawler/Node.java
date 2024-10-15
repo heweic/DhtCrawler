@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 /**
  * 节点信息
  */
-public interface NodeInfo {
+public interface Node {
 
 	/**
 	 * 最后活跃时间

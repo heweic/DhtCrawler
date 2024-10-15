@@ -3,7 +3,6 @@ package org.my.pro.dhtcrawler.handler;
 import org.my.pro.dhtcrawler.KeyWord;
 import org.my.pro.dhtcrawler.KrpcMessage;
 import org.my.pro.dhtcrawler.LocalDHTNode;
-import org.my.pro.dhtcrawler.RoutingTable;
 import org.my.pro.dhtcrawler.message.DefaultResponse;
 import org.my.pro.dhtcrawler.util.BenCodeUtils;
 
@@ -15,8 +14,8 @@ import org.my.pro.dhtcrawler.util.BenCodeUtils;
  */
 public class PingHandler extends RequestMessageHandler {
 
-	public PingHandler(RoutingTable routingTable, LocalDHTNode dhtNode) {
-		super(routingTable, dhtNode);
+	public PingHandler(LocalDHTNode dhtNode) {
+		super(dhtNode);
 	}
 
 	@Override

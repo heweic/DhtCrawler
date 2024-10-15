@@ -7,13 +7,11 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.my.pro.dhtcrawler.KeyWord;
 import org.my.pro.dhtcrawler.KrpcMessage;
 import org.my.pro.dhtcrawler.LocalDHTNode;
-import org.my.pro.dhtcrawler.NodeInfo;
-import org.my.pro.dhtcrawler.RoutingTable;
+import org.my.pro.dhtcrawler.Node;
 import org.my.pro.dhtcrawler.WorkHandler;
 import org.my.pro.dhtcrawler.message.DefaultRequest;
 import org.my.pro.dhtcrawler.message.DefaultResponse;
 import org.my.pro.dhtcrawler.util.BenCodeUtils;
-import org.my.pro.dhtcrawler.util.ByteArrayHexUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,8 +34,8 @@ public class GetPeersHandler extends RequestMessageHandler {
 
 	private Logger logger = LoggerFactory.getLogger(GetPeersHandler.class);
 
-	public GetPeersHandler(RoutingTable routingTable, LocalDHTNode dhtNode, WorkHandler handler) {
-		super(routingTable, dhtNode);
+	public GetPeersHandler(LocalDHTNode dhtNode, WorkHandler handler) {
+		super(dhtNode);
 		this.handler = handler;
 	}
 
@@ -49,22 +47,22 @@ public class GetPeersHandler extends RequestMessageHandler {
 
 			byte[] bs = defaultRequest.a().getMap().get(KeyWord.INFO_HASH).getBytes();
 
-			String code = ByteArrayHexUtils.byteArrayToHexString(bs);
+			// String hashcode = DHTUtils.byteArrayToHexString(bs);
 
-			logger.info("{  " + localNode.port() + "  }  " + code + "{ " + message.addr().getAddress().getHostAddress()
-					+ ":" + message.addr().getPort() + " }");
+//			logger.info("{  " + localNode.port() + "  }  " + hashcode + "{ " + message.addr().getAddress().getHostAddress()
+//					+ ":" + message.addr().getPort() + " }");
 
 			if (null != handler) {
-				handler.handler(code, message);
+				handler.handler(bs, message);
 			}
 
 			// printMagnet(new String(bs, KeyWord.DHT_CHARSET), "GetPeersHandler");
 			//
-			List<NodeInfo> result = localNode.findNearest();
+			List<Node> result = localNode.findNearest(bs);
 
 			ByteBuffer buffer = ByteBuffer.allocate(26 * result.size());
 
-			for (NodeInfo info : result) {
+			for (Node info : result) {
 				buffer.put(info.toBuf().array());
 			}
 

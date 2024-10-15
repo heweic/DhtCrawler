@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class DHTNodeIDPartitionGenerator {
+	
 	// 生成指定数量的 DHT 节点 ID，分为 numPartitions 个区间
 	public static List<BigInteger> generateDHTNodeIDs(int nodeCount, int numPartitions) {
 		List<BigInteger> nodeIDs = new ArrayList<>();

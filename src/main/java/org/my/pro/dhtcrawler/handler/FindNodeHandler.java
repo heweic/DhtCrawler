@@ -6,8 +6,7 @@ import java.util.List;
 import org.my.pro.dhtcrawler.KeyWord;
 import org.my.pro.dhtcrawler.KrpcMessage;
 import org.my.pro.dhtcrawler.LocalDHTNode;
-import org.my.pro.dhtcrawler.NodeInfo;
-import org.my.pro.dhtcrawler.RoutingTable;
+import org.my.pro.dhtcrawler.Node;
 import org.my.pro.dhtcrawler.message.DefaultRequest;
 import org.my.pro.dhtcrawler.message.DefaultResponse;
 import org.my.pro.dhtcrawler.util.BenCodeUtils;
@@ -22,8 +21,8 @@ import org.my.pro.dhtcrawler.util.BenCodeUtils;
  */
 public class FindNodeHandler extends RequestMessageHandler {
 
-	public FindNodeHandler(RoutingTable routingTable, LocalDHTNode dhtNode) {
-		super(routingTable, dhtNode);
+	public FindNodeHandler(LocalDHTNode dhtNode) {
+		super(dhtNode);
 	}
 
 	@Override
@@ -31,15 +30,16 @@ public class FindNodeHandler extends RequestMessageHandler {
 
 		if (message instanceof DefaultRequest) {
 			//
-			//DefaultRequest defaultRequest = (DefaultRequest) message;
-			//byte[] bs = defaultRequest.a().getMap().get(KeyWord.TARGET).getBytes();
+			DefaultRequest defaultRequest = (DefaultRequest) message;
+			byte[] bs = defaultRequest.a().getMap().get(KeyWord.TARGET).getBytes();
 
 			//
-			List<NodeInfo> result = localNode.findNearest();
-
+			List<Node> result = localNode.findNearest(bs);
+			//
+			
 			ByteBuffer buffer = ByteBuffer.allocate(26 * result.size());
 
-			for (NodeInfo info : result) {
+			for (Node info : result) {
 				buffer.put(info.toBuf().array());
 			}
 

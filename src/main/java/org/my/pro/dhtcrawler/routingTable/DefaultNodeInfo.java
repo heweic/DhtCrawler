@@ -4,9 +4,9 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 import org.my.pro.dhtcrawler.NodeId;
-import org.my.pro.dhtcrawler.NodeInfo;
+import org.my.pro.dhtcrawler.Node;
 
-public class DefaultNodeInfo implements NodeInfo {
+public class DefaultNodeInfo implements Node {
 
 	private long activeTime;
 
@@ -50,9 +50,9 @@ public class DefaultNodeInfo implements NodeInfo {
 	@Override
 	public ByteBuffer toBuf() {
 		ByteBuffer buffer = ByteBuffer.allocate(26);
-		buffer.put(id.bsId());
-		buffer.put(ipData);
-		buffer.put(portData);
+		buffer.put(id.bsId()); // ID
+		buffer.put(ipData); // IP
+		buffer.put(portData);// port
 		return buffer;
 	}
 

@@ -10,10 +10,10 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.input.AutoCloseInputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.my.pro.dhtcrawler.NodeInfo;
+import org.my.pro.dhtcrawler.Node;
 import org.my.pro.dhtcrawler.routingTable.DefaultNodeInfo;
 import org.my.pro.dhtcrawler.util.BenCodeUtils;
-import org.my.pro.dhtcrawler.util.ByteArrayHexUtils;
+import org.my.pro.dhtcrawler.util.DHTUtils;
 import org.my.pro.dhtcrawler.util.GsonUtils;
 
 import be.adaxisoft.bencode.BDecoder;
@@ -48,13 +48,13 @@ public class TryDownloadBt {
 	/**
 	 * peer
 	 */
-	private NodeInfo peer;
+	private Node peer;
 
 	private byte[] localId;
 
 	private static Log log = LogFactory.getLog(TryDownloadBt.class);
 
-	public TryDownloadBt(byte[] infoHash, NodeInfo peer, byte[] localId) {
+	public TryDownloadBt(byte[] infoHash, Node peer, byte[] localId) {
 		super();
 		this.infoHash = infoHash;
 		this.peer = peer;
@@ -110,7 +110,7 @@ public class TryDownloadBt {
 			System.arraycopy(infoHash, 0, sendBytes, 28, 20);
 			System.arraycopy(peerId, 0, sendBytes, 48, 20);
 			System.out.println(
-					"发送握手消息" + ByteArrayHexUtils.byteArrayToHexString(sendBytes) + "-------" + sendBytes.length);
+					"发送握手消息" + DHTUtils.byteArrayToHexString(sendBytes) + "-------" + sendBytes.length);
 			ctx.channel().writeAndFlush(Unpooled.copiedBuffer(sendBytes));
 
 		}
@@ -345,16 +345,16 @@ public class TryDownloadBt {
 	public static void main(String[] args) throws InterruptedException {
 		String ip = "176.9.137.195"; // 目标IP
 		int port = 37040; // 目标端口
-		byte[] infoHash = ByteArrayHexUtils.hexStringToByteArray("fe398bcb9f127804ba9afcbee934303496487428");
+		byte[] infoHash = DHTUtils.hexStringToByteArray("fe398bcb9f127804ba9afcbee934303496487428");
 
 		// 假设已经填充infoHash
 		// Arrays.fill(infoHash, (byte) 1);
 
 		TryDownloadBt client;
 		try {
-			NodeInfo info = new DefaultNodeInfo(null, ip, port);
+			Node info = new DefaultNodeInfo(null, ip, port);
 			client = new TryDownloadBt(infoHash, info,
-					ByteArrayHexUtils.hexStringToByteArray("2d4e455454593030312d8fd20652dd2588277467"));
+					DHTUtils.hexStringToByteArray("2d4e455454593030312d8fd20652dd2588277467"));
 			client.downloadTorrentFile();
 		} catch (Exception e) {
 			// TODO Auto-generated catch block

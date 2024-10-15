@@ -38,7 +38,4 @@ public class BtUtils {
 	}
 	
 	
-	public static void main(String[] args) {
-		System.out.println("http://qr.fyxyun.com/q/r.html?mac=EC:6C:9F:12:34&sn=1234567891&p=B2W-12345".length());
-	}
 }

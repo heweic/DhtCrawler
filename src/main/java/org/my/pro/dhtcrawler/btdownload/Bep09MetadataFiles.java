@@ -15,7 +15,7 @@ import org.apache.commons.io.input.AutoCloseInputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.my.pro.dhtcrawler.util.BenCodeUtils;
-import org.my.pro.dhtcrawler.util.ByteArrayHexUtils;
+import org.my.pro.dhtcrawler.util.DHTUtils;
 import org.my.pro.dhtcrawler.util.GsonUtils;
 import org.my.pro.dhtcrawler.util.NodeIdRandom;
 
@@ -105,7 +105,7 @@ public class Bep09MetadataFiles {
 			e.printStackTrace();
 		}
 
-		boolean isDown = new File(canonicalPath + "/torrent/" + ByteArrayHexUtils.byteArrayToHexString(hash)).exists();
+		boolean isDown = new File(canonicalPath + "/torrent/" + DHTUtils.byteArrayToHexString(hash)).exists();
 		if (!isDown) {
 			if (null != clientChannel) {
 				clientChannel.close();
@@ -170,7 +170,9 @@ public class Bep09MetadataFiles {
 		public void channelRead0(ChannelHandlerContext ctx, ByteBuf bf) throws Exception {
 
 			if (isHandShack.get()) {
-
+                if(bf.readableBytes() < 68) {
+                	return;
+                }
 				bf.readByte();
 				bf.readBytes(19);// 协议
 				bf.readBytes(8);// 8字节占位
@@ -278,7 +280,7 @@ public class Bep09MetadataFiles {
 					byte[] fulbs = new byte[fullData.readableBytes()];
 					fullData.readBytes(fulbs);
 					FileUtils.writeByteArrayToFile(
-							new File(canonicalPath + "/torrent/" + ByteArrayHexUtils.byteArrayToHexString(hash)), fulbs,
+							new File(canonicalPath + "/torrent/" + DHTUtils.byteArrayToHexString(hash)), fulbs,
 							true);
 
 					isDownload.countDown();
@@ -387,8 +389,8 @@ public class Bep09MetadataFiles {
 		//2024-10-14 18:01:56,202 [org.my.pro.dhtcrawler.btdownload.Bep09MetadataFiles]-[INFO] 连接到14.19.153.191：22223下载:[B@4980efac
 		String ip = "14.19.153.191"; // 目标IP
 		int port = 22223; // 目标端口
-		byte[] infoHash = ByteArrayHexUtils.hexStringToByteArray("6972a67a6990b5adb03b8351ddf02ecf4f3458dc");
-		Bep09MetadataFiles bep09MetadataFiles = new Bep09MetadataFiles(infoHash, NodeIdRandom.generatePeerId(), ip,
+		byte[] infoHash = DHTUtils.hexStringToByteArray("6972a67a6990b5adb03b8351ddf02ecf4f3458dc");
+		Bep09MetadataFiles bep09MetadataFiles = new Bep09MetadataFiles(infoHash, DHTUtils.generatePeerId(), ip,
 				port);
 
 		try {

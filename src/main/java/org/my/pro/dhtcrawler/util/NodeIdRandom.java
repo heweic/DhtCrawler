@@ -8,17 +8,6 @@ import org.my.pro.dhtcrawler.KeyWord;
 
 public class NodeIdRandom {
 
-	public static byte[] generatePeerId() {
-		// 生成随机的peer_id
-		byte[] peerId = new byte[20];
-//		String prefix = "-NETTY001-";
-//		System.arraycopy(prefix.getBytes(StandardCharsets.US_ASCII), 0, peerId, 0, prefix.length());
-		for (int i = 0; i < 20; i++) {
-			peerId[i] = (byte) (Math.random() * 255);
-		}
-		return peerId;
-	}
-
 	/**
 	 * 
 	 * 思路： 一个节点生成多个ID 大范围认识节点
@@ -48,10 +37,11 @@ public class NodeIdRandom {
 
 			ids.add(random(i));
 		}
-
 		//
 		return ids;
-
+	}
+	
+	public static void main(String[] args) {
 	}
 
 }

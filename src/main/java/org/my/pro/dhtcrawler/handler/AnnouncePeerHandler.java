@@ -7,8 +7,9 @@ import org.my.pro.dhtcrawler.RoutingTable;
 import org.my.pro.dhtcrawler.WorkHandler;
 import org.my.pro.dhtcrawler.message.DefaultRequest;
 import org.my.pro.dhtcrawler.message.DefaultResponse;
+import org.my.pro.dhtcrawler.task.DownLoadTorrent;
 import org.my.pro.dhtcrawler.util.BenCodeUtils;
-import org.my.pro.dhtcrawler.util.ByteArrayHexUtils;
+import org.my.pro.dhtcrawler.util.DHTUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,13 +23,13 @@ import org.slf4j.LoggerFactory;
  */
 public class AnnouncePeerHandler extends RequestMessageHandler {
 
-	private WorkHandler handler;
+	private DownLoadTorrent downLoadTorrent;
 
 	private static Logger logger = LoggerFactory.getLogger(AnnouncePeerHandler.class);
 
-	public AnnouncePeerHandler(RoutingTable routingTable, LocalDHTNode dhtNode, WorkHandler handler) {
-		super(routingTable, dhtNode);
-		this.handler = handler;
+	public AnnouncePeerHandler(LocalDHTNode dhtNode, DownLoadTorrent downLoadTorrent) {
+		super(dhtNode);
+		this.downLoadTorrent = downLoadTorrent;
 	}
 
 	@Override
@@ -37,16 +38,15 @@ public class AnnouncePeerHandler extends RequestMessageHandler {
 		if (message instanceof DefaultRequest) {
 			DefaultRequest defaultRequest = (DefaultRequest) message;
 
-			String code = ByteArrayHexUtils
-					.byteArrayToHexString(defaultRequest.a().getMap().get(KeyWord.INFO_HASH).getBytes());
+			byte[] hash = defaultRequest.a().getMap().get(KeyWord.INFO_HASH).getBytes();
 
 			String mes = message.addr().getAddress().getHostAddress() + "下载端口:"
-					+ defaultRequest.a().getMap().get("port").getInt() + "种子hash:" + code;
-			logger.error(mes);
+					+ defaultRequest.a().getMap().get("port").getInt() + "种子hash:"
+					+ DHTUtils.byteArrayToHexString(hash);
+			logger.info(mes);
 
-			if (null != handler) {
-				handler.handler(mes, message);
-			}
+			downLoadTorrent.tryDownLoad(message.addr().getAddress().getHostAddress(),
+					defaultRequest.a().getMap().get("port").getInt(), hash);
 		}
 
 		DefaultResponse defaultResponse = new DefaultResponse(message.t(), message.addr());

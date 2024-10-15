@@ -1,7 +1,6 @@
 package org.my.pro.dhtcrawler;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 路由表
@@ -11,22 +10,35 @@ public interface RoutingTable {
 	/**
 	 * 添加节点
 	 */
-	public void add(NodeInfo info);
-	
-	public void remove(String id);
+	public void add(Node node);
 
 	/**
-	 * 去size个随机元素
+	 * 删除节点
+	 * 
+	 * @param id
 	 */
-	public List<NodeInfo> random(int size);
+	public void removeNode(Node node);
 
 	/**
-	 * 刷新节点活跃信息
+	 * 查询目标节点附近的节点
+	 * 
+	 * @param targetId
+	 * @param count
+	 * @return
 	 */
-	public void nodeActive(String id);
-
-	public boolean has(String id);
+	public List<Node> getClosestNodes(byte[] targetId, int count);
 	
-	public Map<String, NodeInfo> allNodes();
+	/**
+	 * 随机抓node
+	 * @param num
+	 * @return
+	 */
+	public List<Node> randomNodes(int num);
+	
+	/**
+	 *  是否有节点
+	 * @return
+	 */
+	public boolean hasNode();
 
 }
