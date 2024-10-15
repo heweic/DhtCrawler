@@ -67,5 +67,9 @@ public interface LocalDHTNode {
 	 */
 	public List<Node> findNearest(byte[] hash);
 
-	public List<Node> randomNodes(int num);
+	/**
+	 * 
+	 * @param hash
+	 */
+	public void tryDownLoad(byte[] hash);
 }

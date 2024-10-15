@@ -67,7 +67,7 @@ public class DHTCrawler implements DHTTask {
 						}
 						//
 						if(nodes.size() > 0) {
-							sleepTime = 1000;
+							sleepTime = 5000;
 							for (Node node : nodes) {
 								KrpcMessage get_peers = MessageFactory.createFindNode(node.ip(), node.port(),
 										dhtNode.id(), targetNode);

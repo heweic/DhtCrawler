@@ -8,13 +8,11 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.my.pro.dhtcrawler.btdownload.HttpMagnetToTorrent;
 import org.my.pro.dhtcrawler.btdownload.ItorrentsMagnetTo;
 import org.my.pro.dhtcrawler.saver.MagnetSaver;
 import org.my.pro.dhtcrawler.saver.TxtMagnetSaver;
-import org.my.pro.dhtcrawler.util.NodeIdRandom;
 
 public class Convert {
 
@@ -24,7 +22,6 @@ public class Convert {
 	private ThreadPoolExecutor executor = new ThreadPoolExecutor(1, 20, 0L, TimeUnit.MILLISECONDS,
 			new ArrayBlockingQueue<Runnable>(10000 * 100), new RejectedExecutionHandler() {
 
-		
 				// 向线程池提交任务出现异常时
 				@Override
 				public void rejectedExecution(Runnable runnable, ThreadPoolExecutor threadpoolexecutor) {
@@ -89,7 +86,4 @@ public class Convert {
 
 	}
 
-	public static void main(String[] args) {
-		System.out.println("5caa508c73257191d4089438976d7ccfc53e29d6".length());
-	}
 }

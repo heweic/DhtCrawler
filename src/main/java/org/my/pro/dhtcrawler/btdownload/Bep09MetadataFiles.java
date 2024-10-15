@@ -16,8 +16,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.my.pro.dhtcrawler.util.BenCodeUtils;
 import org.my.pro.dhtcrawler.util.DHTUtils;
-import org.my.pro.dhtcrawler.util.GsonUtils;
-import org.my.pro.dhtcrawler.util.NodeIdRandom;
 
 import be.adaxisoft.bencode.BDecoder;
 import be.adaxisoft.bencode.BEncodedValue;
@@ -117,7 +115,7 @@ public class Bep09MetadataFiles {
 		return isDown;
 	}
 
-	public void tryDownload() throws Exception{
+	public void tryDownload() throws Exception {
 		// 使用netty发起tcp连接到peer
 		group = new NioEventLoopGroup();
 		try {
@@ -170,9 +168,9 @@ public class Bep09MetadataFiles {
 		public void channelRead0(ChannelHandlerContext ctx, ByteBuf bf) throws Exception {
 
 			if (isHandShack.get()) {
-                if(bf.readableBytes() < 68) {
-                	return;
-                }
+				if (bf.readableBytes() < 68) {
+					return;
+				}
 				bf.readByte();
 				bf.readBytes(19);// 协议
 				bf.readBytes(8);// 8字节占位
@@ -185,9 +183,9 @@ public class Bep09MetadataFiles {
 				BitTorrent bt = new BitTorrent();
 
 				bt.setLength(bf.readInt());
-				//仅仅解析BEP09协议中 种子元数据部分
+				// 仅仅解析BEP09协议中 种子元数据部分
 				bt.setType(bf.readByte());
-				if(bt.getType() == 20) {
+				if (bt.getType() == 20) {
 					bt.setId(bf.readByte());
 
 					byte[] dictionary = new byte[bt.getLength() - 2];
@@ -198,12 +196,11 @@ public class Bep09MetadataFiles {
 					ut_metadata = bv.getMap().get("m").getMap().get("ut_metadata").getInt();
 					metadata_size = bv.getMap().get("metadata_size").getInt();
 					blockSize = (int) Math.ceil((double) metadata_size / (16 << 10));
-				}else {
-					//跳过
+				} else {
+					// 跳过
 					bf.readBytes(bt.getLength() - 1);
 				}
-				// 
-				
+				//
 
 				//
 				isHandShack.set(false);
@@ -280,8 +277,7 @@ public class Bep09MetadataFiles {
 					byte[] fulbs = new byte[fullData.readableBytes()];
 					fullData.readBytes(fulbs);
 					FileUtils.writeByteArrayToFile(
-							new File(canonicalPath + "/torrent/" + DHTUtils.byteArrayToHexString(hash)), fulbs,
-							true);
+							new File(canonicalPath + "/torrent/" + DHTUtils.byteArrayToHexString(hash)), fulbs, true);
 
 					isDownload.countDown();
 
@@ -385,21 +381,22 @@ public class Bep09MetadataFiles {
 	}
 
 	public static void main(String[] args) {
-		//开始尝试下载:14.19.153.191:22223-6972a67a6990b5adb03b8351ddf02ecf4f3458dc
-		//2024-10-14 18:01:56,202 [org.my.pro.dhtcrawler.btdownload.Bep09MetadataFiles]-[INFO] 连接到14.19.153.191：22223下载:[B@4980efac
+		// 开始尝试下载:14.19.153.191:22223-6972a67a6990b5adb03b8351ddf02ecf4f3458dc
+		// 2024-10-14 18:01:56,202
+		// [org.my.pro.dhtcrawler.btdownload.Bep09MetadataFiles]-[INFO]
+		// 连接到14.19.153.191：22223下载:[B@4980efac
 		String ip = "14.19.153.191"; // 目标IP
 		int port = 22223; // 目标端口
 		byte[] infoHash = DHTUtils.hexStringToByteArray("6972a67a6990b5adb03b8351ddf02ecf4f3458dc");
-		Bep09MetadataFiles bep09MetadataFiles = new Bep09MetadataFiles(infoHash, DHTUtils.generatePeerId(), ip,
-				port);
+		Bep09MetadataFiles bep09MetadataFiles = new Bep09MetadataFiles(infoHash, DHTUtils.generatePeerId(), ip, port);
 
 		try {
 			bep09MetadataFiles.tryDownload();
-		}catch (Exception e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 			// TODO: handle exception
 		}
 		System.out.println(bep09MetadataFiles.get());
-		
+
 	}
 }

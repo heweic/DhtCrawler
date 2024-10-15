@@ -2,6 +2,7 @@ package org.my.pro.dhtcrawler.task;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -33,6 +34,8 @@ public class TryFindPeerAndDownload implements DHTTask {
 	private ExecutorService executor = Executors.newFixedThreadPool(10);
 
 	private static Log log = LogFactory.getLog(TryFindPeerAndDownload.class);
+	
+	private CountDownLatch countDownLatch = new CountDownLatch(1);
 
 	public TryFindPeerAndDownload(LocalDHTNode node, DownLoadTorrent downLoadTorrent) {
 		super();
@@ -43,6 +46,13 @@ public class TryFindPeerAndDownload implements DHTTask {
 	}
 
 	public void subTask(byte[] hash) {
+		try {
+			countDownLatch.await();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 		executor.execute(new RunTask(hash));
 	}
 
@@ -68,7 +78,7 @@ public class TryFindPeerAndDownload implements DHTTask {
 			for (Node n : nodes) {
 				getPerrs(peers, n.ip(), n.port(), targetHash);
 			}
-			log.info(targetHash + "找到peer:" + peers.size());
+//			log.info(targetHash + "找到peer:" + peers.size());
 			// 提交下载任务
 			for (Node peer : peers) {
 				downLoadTorrent.tryDownLoad(peer.ip(), peer.port(), targetHash);
@@ -135,9 +145,8 @@ public class TryFindPeerAndDownload implements DHTTask {
 
 	@Override
 	public synchronized void start() {
-
 		log.info(DHTUtils.byteArrayToHexString(node.id()) + "Bt下载模块启动");
-
+		countDownLatch.countDown();
 	}
 
 	@Override

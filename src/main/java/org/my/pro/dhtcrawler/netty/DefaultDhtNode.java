@@ -109,9 +109,10 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 	}
 
+	
 	@Override
-	public List<Node> randomNodes(int num) {
-		return routingTable.randomNodes(num);
+	public void tryDownLoad(byte[] hash) {
+		this.tryCrawlingTorrent.subTask(hash);
 	}
 
 	@Override
