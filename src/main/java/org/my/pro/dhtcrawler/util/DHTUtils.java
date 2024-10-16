@@ -2,6 +2,8 @@ package org.my.pro.dhtcrawler.util;
 
 import java.math.BigInteger;
 
+import org.apache.commons.rng.UniformRandomProvider;
+import org.apache.commons.rng.simple.RandomSource;
 import org.my.pro.dhtcrawler.Node;
 import org.my.pro.dhtcrawler.NodeId;
 import org.my.pro.dhtcrawler.routingTable.DefaultNodeInfo;
@@ -14,8 +16,8 @@ import io.netty.buffer.ByteBuf;
  */
 public class DHTUtils {
 
-	
-	
+	public static UniformRandomProvider rng = RandomSource.XO_RO_SHI_RO_128_PP.create();
+
 	public static Node readNodeInfo(ByteBuf buffer) {
 
 		byte[] id = new byte[20];
@@ -38,9 +40,7 @@ public class DHTUtils {
 	 */
 	public static byte[] generateNodeId() {
 		byte[] peerId = new byte[20];
-		for (int i = 0; i < 20; i++) {
-			peerId[i] = (byte) (Math.random() * 255);
-		}
+		rng.nextBytes(peerId);
 		return peerId;
 	}
 
@@ -50,11 +50,7 @@ public class DHTUtils {
 	 * @return
 	 */
 	public static byte[] generatePeerId() {
-		byte[] peerId = new byte[20];
-		for (int i = 0; i < 20; i++) {
-			peerId[i] = (byte) (Math.random() * 255);
-		}
-		return peerId;
+		return generateNodeId();
 	}
 
 	/**
@@ -114,9 +110,31 @@ public class DHTUtils {
 	public static BigInteger distanceAsBigInteger(byte[] xorResult) {
 		return new BigInteger(1, xorResult);
 	}
+
+	/**
+	 * 随机目标较近的节点,第一个byte一样
+	 * 
+	 * @param targetID
+	 * @return
+	 */
+	public static byte[] closestID(byte[] targetID) {
+		byte[] peerId = new byte[20];
+		//
+		peerId[0] = targetID[0];
+		// 随机剩下的19
+		byte[] random = new byte[19];
+		rng.nextBytes(random);
+		// copy
+		System.arraycopy(random, 0, peerId, 1, 19);
+		return peerId;
+	}
+	public static void nextBytes(byte[] bs) {
+		rng.nextBytes(bs);
+	}
 	
 	public static void main(String[] args) {
-		System.out.println(DHTUtils.hexStringToByteArray("c1b1743e0b67f322b735d0d7cf96a5710b19f6e3").length);
+		System.out.println(Byte.MIN_VALUE);
+		System.out.println(Byte.MAX_VALUE);
 	}
 
 }

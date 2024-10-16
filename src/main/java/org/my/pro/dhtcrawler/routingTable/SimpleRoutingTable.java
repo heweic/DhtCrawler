@@ -38,6 +38,14 @@ public class SimpleRoutingTable implements RoutingTable {
 
 	}
 
+	
+	
+	@Override
+	public int targetSize(byte[] target) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
 	/**
 	 * 水桶抽样算法实现
 	 * 

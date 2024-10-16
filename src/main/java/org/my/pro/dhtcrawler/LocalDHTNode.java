@@ -66,10 +66,18 @@ public interface LocalDHTNode {
 	 * 查询hash附近的节点
 	 */
 	public List<Node> findNearest(byte[] hash);
-
 	/**
 	 * 
 	 * @param hash
 	 */
 	public void tryDownLoad(byte[] hash);
+	
+	/**
+	 * 目标节点与当前节点距离Index桶中是否有节点表数量
+	 * @param target
+	 * @return
+	 */
+	public int targetSize(byte[] target);
+	
+	
 }

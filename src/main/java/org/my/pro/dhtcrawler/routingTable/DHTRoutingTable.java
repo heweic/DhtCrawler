@@ -4,13 +4,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.my.pro.dhtcrawler.Node;
 import org.my.pro.dhtcrawler.RoutingTable;
+import org.my.pro.dhtcrawler.util.DHTUtils;
 
 /**
  * DHT路由表实现
  */
 public class DHTRoutingTable implements RoutingTable {
+
+	private static Log log = LogFactory.getLog(DHTRoutingTable.class);
 
 	/**
 	 * 当前节点ID
@@ -19,7 +24,11 @@ public class DHTRoutingTable implements RoutingTable {
 	/**
 	 * 每个桶的大小
 	 */
-	private final int bucketSize = 8;
+	private final int bucketValueSize = 8;
+	/**
+	 * 桶的数量， 20字节的ID，对应160个位
+	 */
+	private final int bucketSize = 20 * 8;
 	/**
 	 * 桶集合
 	 */
@@ -31,8 +40,8 @@ public class DHTRoutingTable implements RoutingTable {
 
 	public DHTRoutingTable(byte[] localNodeId) {
 		this.localNodeId = localNodeId;
-		int bucketCount = localNodeId.length * 8; // 例如 160 位对应 160 个桶
-		for (int i = 0; i < bucketCount; i++) {
+
+		for (int i = 0; i < bucketSize; i++) {
 			buckets.add(new ArrayList<>());
 		}
 	}
@@ -53,14 +62,15 @@ public class DHTRoutingTable implements RoutingTable {
 			int bucketIndex = calculateBucketIndex(node.nodeId().bsId());
 			List<Node> bucket = buckets.get(bucketIndex);
 			if (!bucket.contains(node)) {
-				if (bucket.size() < bucketSize) {
+				if (bucket.size() < bucketValueSize) {
+					//log.info(node.nodeId().id() + "添加到" + bucketIndex);
 					bucket.add(node); // 如果桶未满，则添加节点
 				} else {
 					// 桶已满，可能需要实现替换或移除策略
 					handleFullBucket(bucket, node);
 				}
 			}
-			if(!hasValue) {
+			if (!hasValue) {
 				hasValue = true;
 			}
 		}
@@ -80,8 +90,8 @@ public class DHTRoutingTable implements RoutingTable {
 		//
 		int bucketIndex = calculateBucketIndex(targetId);
 		List<Node> closestNodes = new ArrayList<>(buckets.get(bucketIndex));
-		
-		if(closestNodes.size() == 0) {
+
+		if (closestNodes.size() == 0) {
 			return closestNodes;
 		}
 
@@ -105,17 +115,12 @@ public class DHTRoutingTable implements RoutingTable {
 
 	// 获取桶的索引，基于XOR距离
 	private int calculateBucketIndex(byte[] nodeId) {
-		int distance = xorDistance(localNodeId, nodeId);
-		return Integer.numberOfLeadingZeros(distance) - (Integer.SIZE - buckets.size());
-	}
+		//
+		byte[] distance = DHTUtils.xorDistance(localNodeId, nodeId);
+		int index = bucketSize - DHTUtils.distanceAsBigInteger(distance).bitCount();
 
-	// XOR 计算距离
-	private int xorDistance(byte[] id1, byte[] id2) {
-		int distance = 0;
-		for (int i = 0; i < id1.length; i++) {
-			distance = (distance << 8) | (id1[i] ^ id2[i]);
-		}
-		return distance;
+		// log.info(DHTUtils.byteArrayToHexString(nodeId) + "-桶索引:" + index);
+		return index;
 	}
 
 	// 处理满桶的替换策略 (占位实现)
@@ -134,6 +139,12 @@ public class DHTRoutingTable implements RoutingTable {
 	@Override
 	public List<Node> randomNodes(int num) {
 		return getRandomEntries(num);
+	}
+
+	@Override
+	public int targetSize(byte[] target) {
+		int index = calculateBucketIndex(target);
+		return buckets.get(index).size();
 	}
 
 	/**

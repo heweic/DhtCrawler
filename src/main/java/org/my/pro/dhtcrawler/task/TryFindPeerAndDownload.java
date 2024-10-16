@@ -1,11 +1,14 @@
 package org.my.pro.dhtcrawler.task;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.my.pro.dhtcrawler.DHTTask;
@@ -14,6 +17,7 @@ import org.my.pro.dhtcrawler.KeyWord;
 import org.my.pro.dhtcrawler.KrpcMessage;
 import org.my.pro.dhtcrawler.LocalDHTNode;
 import org.my.pro.dhtcrawler.Node;
+import org.my.pro.dhtcrawler.btdownload.Bep09MetadataFiles;
 import org.my.pro.dhtcrawler.message.DefaultResponse;
 import org.my.pro.dhtcrawler.message.MessageFactory;
 import org.my.pro.dhtcrawler.routingTable.DefaultNodeInfo;
@@ -29,22 +33,35 @@ import io.netty.buffer.Unpooled;
 public class TryFindPeerAndDownload implements DHTTask {
 
 	private LocalDHTNode node;
-	private DownLoadTorrent downLoadTorrent;
-
-	private ExecutorService executor = Executors.newFixedThreadPool(10);
-
+	private ExecutorService tryFindPeerExe = Executors.newFixedThreadPool(10);
+	private ExecutorService downloadTorrentExe = Executors.newCachedThreadPool();
 	private static Log log = LogFactory.getLog(TryFindPeerAndDownload.class);
-	
 	private CountDownLatch countDownLatch = new CountDownLatch(1);
 
-	public TryFindPeerAndDownload(LocalDHTNode node, DownLoadTorrent downLoadTorrent) {
+	private static String canonicalPath;
+
+	static {
+		try {
+			canonicalPath = new File("").getCanonicalPath();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	private File file = new File(canonicalPath + "/data/hash.txt");
+	public static String NEW_LINE = System.getProperty("line.separator");
+
+	public TryFindPeerAndDownload(LocalDHTNode node) {
 		super();
 		this.node = node;
-		this.downLoadTorrent = downLoadTorrent;
 		//
 
 	}
 
+	/**
+	 * 只有哈希
+	 * 
+	 * @param hash
+	 */
 	public void subTask(byte[] hash) {
 		try {
 			countDownLatch.await();
@@ -52,8 +69,37 @@ public class TryFindPeerAndDownload implements DHTTask {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
-		executor.execute(new RunTask(hash));
+		writeHashToFile(hash);
+		tryFindPeerExe.execute(new RunTask(hash));
+	}
+
+	private void writeHashToFile(byte[] hash) {
+		try {
+
+			String line = DHTUtils.byteArrayToHexString(node.id()) + ":" + node.port() + ":"+DHTUtils.byteArrayToHexString(hash)+ NEW_LINE;
+			FileUtils.writeStringToFile(file, line, true);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	public void subTask(String ip, int port, byte[] hash) {
+		try {
+			countDownLatch.await();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		writeHashToFile(hash);
+		downloadTorrentExe.execute(new Runnable() {
+
+			@Override
+			public void run() {
+				Bep09MetadataFiles bep09MetadataFiles = new Bep09MetadataFiles(hash, node.id(), ip, port);
+				bep09MetadataFiles.tryDownload();
+			}
+		});
 	}
 
 	class RunTask implements Runnable {
@@ -71,17 +117,14 @@ public class TryFindPeerAndDownload implements DHTTask {
 			//
 			byte[] targetHash = hash;
 			List<Node> nodes = node.findNearest(targetHash);
-			
-			
+
 			log.info("开始尝试下载:" + DHTUtils.byteArrayToHexString(targetHash));
 			List<Node> peers = new ArrayList<Node>();
 			for (Node n : nodes) {
 				getPerrs(peers, n.ip(), n.port(), targetHash);
 			}
-//			log.info(targetHash + "找到peer:" + peers.size());
-			// 提交下载任务
 			for (Node peer : peers) {
-				downLoadTorrent.tryDownLoad(peer.ip(), peer.port(), targetHash);
+				subTask(peer.ip(), peer.port(), targetHash);
 			}
 
 		}
@@ -151,6 +194,8 @@ public class TryFindPeerAndDownload implements DHTTask {
 
 	@Override
 	public void stop() {
-		executor.shutdown();
+		tryFindPeerExe.shutdown();
+		downloadTorrentExe.shutdown();
+		this.countDownLatch = new CountDownLatch(1);
 	}
 }

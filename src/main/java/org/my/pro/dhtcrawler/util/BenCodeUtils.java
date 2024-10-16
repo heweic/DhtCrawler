@@ -1,14 +1,12 @@
 package org.my.pro.dhtcrawler.util;
 
 import java.math.BigInteger;
-import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.my.pro.dhtcrawler.exception.IdErroException;
 
 import be.adaxisoft.bencode.BEncodedValue;
-import be.adaxisoft.bencode.BEncoder;
 
 public class BenCodeUtils {
 
@@ -77,10 +75,10 @@ public class BenCodeUtils {
 	}
 
 	public static void main(String[] args) throws Exception {
-	byte[] HANDSHAKE_BYTES = { 19, 66, 105, 116, 84, 111, 114, 114, 101, 110, 116, 32, 112, 114,
-				111, 116, 111, 99, 111, 108, 0, 0, 0, 0, 0, 16, 0, 1 };
-	System.out.println(new String(HANDSHAKE_BYTES));
-		
+		byte[] HANDSHAKE_BYTES = { 19, 66, 105, 116, 84, 111, 114, 114, 101, 110, 116, 32, 112, 114, 111, 116, 111, 99,
+				111, 108, 0, 0, 0, 0, 0, 16, 0, 1 };
+		System.out.println(new String(HANDSHAKE_BYTES));
+
 	}
 
 }

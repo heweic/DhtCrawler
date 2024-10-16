@@ -32,7 +32,7 @@ public class GetPeersHandler extends RequestMessageHandler {
 
 	private WorkHandler handler;
 
-	private Logger logger = LoggerFactory.getLogger(GetPeersHandler.class);
+	public Logger logger = LoggerFactory.getLogger(GetPeersHandler.class);
 
 	public GetPeersHandler(LocalDHTNode dhtNode, WorkHandler handler) {
 		super(dhtNode);

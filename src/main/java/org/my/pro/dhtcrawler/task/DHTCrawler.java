@@ -1,9 +1,7 @@
 package org.my.pro.dhtcrawler.task;
 
 import java.util.List;
-import java.util.Random;
 
-import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.my.pro.dhtcrawler.DHTTask;
@@ -25,14 +23,6 @@ public class DHTCrawler implements DHTTask {
 	private Thread thread;
 
 	private volatile boolean state = false;
-	
-	private static byte[] closestID(byte[] targetID) {
-		byte[] peerId = new byte[20];
-		System.arraycopy(targetID, 0, peerId, 0, 18);
-		peerId[18] = (byte) (Math.random() * 255);
-		peerId[19] = (byte) (Math.random() * 255);
-		return peerId;
-	}
 
 	public DHTCrawler(LocalDHTNode dhtNode) {
 		super();
@@ -41,41 +31,44 @@ public class DHTCrawler implements DHTTask {
 
 			@Override
 			public void run() {
-				// 初始化连接表
-
 				//
 				while (!Thread.currentThread().isInterrupted()) {
 					// 根据自身ID，查询自己距离较近的节点并建立联系
-					long sleepTime = 100;
+
 					try {
-						byte[] targetNode = closestID(dhtNode.id());
-						List<Node> nodes = dhtNode.findNearest(targetNode);
+						// 尽可能均匀的生成剩下19个byte，空间的节点
+						byte[] targetNode = closetId();
 
-						if (nodes.size() < 8) {
-
+						int nodeSize = dhtNode.targetSize(targetNode);
+						
+						//如果自己当前节点桶为空
+						if (nodeSize == 0) {
+							//
 							KrpcMessage krpcMessage4 = MessageFactory.createFindNode("router.utorrent.com", 6881,
-									dhtNode.id(), DHTUtils.generateNodeId());
+									dhtNode.id(), targetNode);
 							KrpcMessage krpcMessage5 = MessageFactory.createFindNode("dht.transmissionbt.com", 6881,
-									dhtNode.id(), DHTUtils.generateNodeId());
+									dhtNode.id(), targetNode);
 							KrpcMessage krpcMessage6 = MessageFactory.createFindNode("router.bittorrent.com", 6881,
-									dhtNode.id(), DHTUtils.generateNodeId());
+									dhtNode.id(), targetNode);
 
 							dhtNode.sendMessage(krpcMessage4);
 							dhtNode.sendMessage(krpcMessage5);
 							dhtNode.sendMessage(krpcMessage6);
-
 						}
-						//
-						if(nodes.size() > 0) {
-							sleepTime = 5000;
+
+						//在自己节点表中发起find_node
+						List<Node> nodes = dhtNode.findNearest(targetNode);
+						if (nodes.size() > 0) {
 							for (Node node : nodes) {
 								KrpcMessage get_peers = MessageFactory.createFindNode(node.ip(), node.port(),
 										dhtNode.id(), targetNode);
+								//log.info(DHTUtils.byteArrayToHexString(targetNode) + "- find_node");
 								dhtNode.sendMessage(get_peers);
 							}
 						}
-						//加入随机，防止附近节点完全遍历,概率重新随机find_node
-						if(RandomUtils.nextInt(0, 30) == 17) {
+
+						// 加入随机，防止附近节点完全遍历,概率重新随机find_node
+						if (DHTUtils.rng.nextInt(0, 30) == 17) {
 							KrpcMessage krpcMessage4 = MessageFactory.createFindNode("router.utorrent.com", 6881,
 									dhtNode.id(), DHTUtils.generateNodeId());
 							KrpcMessage krpcMessage5 = MessageFactory.createFindNode("dht.transmissionbt.com", 6881,
@@ -91,7 +84,7 @@ public class DHTCrawler implements DHTTask {
 
 					}
 					try {
-						Thread.sleep(sleepTime);
+						Thread.sleep(2000);
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -99,6 +92,33 @@ public class DHTCrawler implements DHTTask {
 				}
 			}
 		});
+	}
+
+	private volatile int tmp = 0;
+
+	/**
+	 * 生成下次find_node 目标ID
+	 * 
+	 * @return
+	 */
+	private synchronized byte[] closetId() {
+		byte[] target = new byte[dhtNode.id().length];
+		// 一致的字节
+		for (int i = 0; i < tmp; i++) {
+			target[i] = dhtNode.id()[i];
+		}
+		// 不一致的字节，随机填充
+		byte[] random = new byte[target.length - tmp];
+		DHTUtils.nextBytes(random);
+		//log.info("随机:" + DHTUtils.byteArrayToHexString(random));
+		System.arraycopy(random, 0, target, tmp, random.length);
+		//
+		tmp++;
+		if (tmp == 19) {
+			tmp = 0;
+		}
+		//
+		return target;
 	}
 
 	@Override

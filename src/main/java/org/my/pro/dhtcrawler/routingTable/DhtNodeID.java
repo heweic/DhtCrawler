@@ -2,8 +2,8 @@ package org.my.pro.dhtcrawler.routingTable;
 
 import java.math.BigInteger;
 
-import org.my.pro.dhtcrawler.KeyWord;
 import org.my.pro.dhtcrawler.NodeId;
+import org.my.pro.dhtcrawler.util.DHTUtils;
 
 public class DhtNodeID implements NodeId {
 
@@ -28,7 +28,7 @@ public class DhtNodeID implements NodeId {
 
 	@Override
 	public String id() {
-		return new String(bs, KeyWord.DHT_CHARSET);
+		return DHTUtils.byteArrayToHexString(bs);
 	}
 
 	@Override

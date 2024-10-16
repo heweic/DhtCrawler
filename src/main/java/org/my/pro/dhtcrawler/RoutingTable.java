@@ -40,5 +40,12 @@ public interface RoutingTable {
 	 * @return
 	 */
 	public boolean hasNode();
+	
+	/**
+	 * 目标节点与当前节点距离Index桶中是否有节点表数量
+	 * @param target
+	 * @return
+	 */
+	public int targetSize(byte[] target);
 
 }

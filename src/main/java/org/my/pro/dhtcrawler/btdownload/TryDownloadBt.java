@@ -35,6 +35,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
  * 磁力链接转种子
  * 
  */
+@Deprecated
 public class TryDownloadBt {
 
 	public static final byte[] HANDSHAKE_BYTES = { 19, 66, 105, 116, 84, 111, 114, 114, 101, 110, 116, 32, 112, 114,

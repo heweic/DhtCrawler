@@ -24,10 +24,9 @@ import org.my.pro.dhtcrawler.handler.GetPeersHandler;
 import org.my.pro.dhtcrawler.handler.PingHandler;
 import org.my.pro.dhtcrawler.handler.RequestMessageHandler;
 import org.my.pro.dhtcrawler.handler.ResponseMessageHandler;
-import org.my.pro.dhtcrawler.routingTable.SimpleRoutingTable;
+import org.my.pro.dhtcrawler.routingTable.DHTRoutingTable;
 import org.my.pro.dhtcrawler.task.CleanTimeOutFuture;
 import org.my.pro.dhtcrawler.task.DHTCrawler;
-import org.my.pro.dhtcrawler.task.DownLoadTorrent;
 import org.my.pro.dhtcrawler.task.TryFindPeerAndDownload;
 import org.my.pro.dhtcrawler.util.DHTUtils;
 import org.my.pro.dhtcrawler.util.GsonUtils;
@@ -56,7 +55,6 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 	private ResponseMessageHandler responseMessageHandler;
 
-	private DownLoadTorrent downLoadTorrent;
 	private TryFindPeerAndDownload tryCrawlingTorrent;
 	private CleanTimeOutFuture cleanTimeOutFuture;
 	private DHTCrawler dhtCrawler;
@@ -66,12 +64,11 @@ public class DefaultDhtNode extends AbstractDhtNode {
 	public DefaultDhtNode(byte[] id, int port) {
 		super(id, port);
 		//
-		if(id.length != 20) {
+		if (id.length != 20) {
 			throw new IllegalArgumentException();
 		}
 		//
-		this.downLoadTorrent = new DownLoadTorrent(this);
-		this.tryCrawlingTorrent = new TryFindPeerAndDownload(this, downLoadTorrent);
+		this.tryCrawlingTorrent = new TryFindPeerAndDownload(this);
 		this.cleanTimeOutFuture = new CleanTimeOutFuture(this);
 		this.dhtCrawler = new DHTCrawler(this);
 
@@ -109,7 +106,6 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 	}
 
-	
 	@Override
 	public void tryDownLoad(byte[] hash) {
 		this.tryCrawlingTorrent.subTask(hash);
@@ -148,7 +144,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 	@Override
 	public void start() {
 
-		routingTable = new SimpleRoutingTable();
+		routingTable = new DHTRoutingTable(id());
 		// DefaultDhtNode localNode = new DefaultDhtNode(id(), port(),routingTable);
 
 		// 以下ID 用于回复
@@ -162,7 +158,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 				tryCrawlingTorrent.subTask(hash);
 			}
 		}));
-		map.put(KeyWord.ANNOUNCE_PEER, new AnnouncePeerHandler(this, downLoadTorrent));
+		map.put(KeyWord.ANNOUNCE_PEER, new AnnouncePeerHandler(this, tryCrawlingTorrent));
 		//
 		responseMessageHandler = new DefaultResponseHandler(routingTable, this);
 
@@ -202,7 +198,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 											+ "-" + DHTUtils.byteArrayToHexString(id()));
 						} else {
 							log.info("启动节点:" + GsonUtils.GSON.toJson(id()) + "-" + port() + "失败!");
-							
+
 						}
 						initNettyCountDownLatch.countDown();
 					});
@@ -227,10 +223,14 @@ public class DefaultDhtNode extends AbstractDhtNode {
 		}
 
 		//
-		downLoadTorrent.start();
 		tryCrawlingTorrent.start();
 		cleanTimeOutFuture.start();
 		dhtCrawler.start();
+	}
+
+	@Override
+	public int targetSize(byte[] target) {
+		return routingTable.targetSize(target);
 	}
 
 	@Override
@@ -239,10 +239,9 @@ public class DefaultDhtNode extends AbstractDhtNode {
 			channelFuture.channel().close();
 		}
 		if (null != group) {
-			group.close();
+			group.shutdownGracefully();
 		}
 		tryCrawlingTorrent.stop();
-		downLoadTorrent.stop();
 		cleanTimeOutFuture.stop();
 		dhtCrawler.stop();
 	}
