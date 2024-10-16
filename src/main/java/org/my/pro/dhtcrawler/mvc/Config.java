@@ -33,13 +33,12 @@ public class Config implements ApplicationListener<ApplicationEvent> {
 		for (int i = 0; i < 25; i++) {
 
 			int port = tmp + i;
-
-			String id = DHTUtils.byteArrayToHexString(DHTUtils.generateNodeId());
-
-			LocalDHTNode node = new DefaultDhtNode(DHTUtils.hexStringToByteArray(id), port);
-
+			byte[] nodeId = DHTUtils.generateNodeId();//生成随机ID
+			LocalDHTNode node = new DefaultDhtNode(nodeId, port);
+			node.start(); //启动
+			
 			nodes.add(node);
-			node.start();
+			
 		}
 	}
 
