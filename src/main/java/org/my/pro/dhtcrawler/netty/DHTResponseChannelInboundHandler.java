@@ -4,14 +4,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.my.pro.dhtcrawler.handler.ResponseMessageHandler;
 import org.my.pro.dhtcrawler.message.DefaultResponse;
-import org.my.pro.dhtcrawler.util.GsonUtils;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
 public class DHTResponseChannelInboundHandler extends SimpleChannelInboundHandler<DefaultResponse> {
 
-	private static Log log = LogFactory.getLog(DHTResponseChannelInboundHandler.class);
+	public static Log LOG = LogFactory.getLog(DHTResponseChannelInboundHandler.class);
 
 	private ResponseMessageHandler responseMessageHandler;
 
@@ -26,7 +25,7 @@ public class DHTResponseChannelInboundHandler extends SimpleChannelInboundHandle
 			DefaultResponse response = (DefaultResponse) msg;
 			//
 
-	//		log.info("DefaultResponse收到消息-" + GsonUtils.toJsonString(msg));
+			// log.info("DefaultResponse收到消息-" + GsonUtils.toJsonString(msg));
 
 			// BigInteger id =
 			// BenCodeUtils.id(response.r().getMap().get(KeyWord.ID).getBytes());

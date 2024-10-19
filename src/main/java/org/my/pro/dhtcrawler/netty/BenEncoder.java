@@ -12,7 +12,7 @@ import io.netty.handler.codec.MessageToByteEncoder;
 
 public class BenEncoder extends MessageToByteEncoder<KrpcMessage> {
 
-	private static Log log = LogFactory.getLog(BenEncoder.class);
+	public static Log LOG = LogFactory.getLog(BenEncoder.class);
 
 	@Override
 	protected void encode(ChannelHandlerContext ctx, KrpcMessage msg, ByteBuf out) throws Exception {

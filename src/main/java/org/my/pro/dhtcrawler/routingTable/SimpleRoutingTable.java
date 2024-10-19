@@ -41,6 +41,12 @@ public class SimpleRoutingTable implements RoutingTable {
 	
 	
 	@Override
+	public void resetNodeId(byte[] id) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
 	public int targetSize(byte[] target) {
 		// TODO Auto-generated method stub
 		return 0;
@@ -84,10 +90,8 @@ public class SimpleRoutingTable implements RoutingTable {
 		return null;
 	}
 
-	@Override
-	public boolean hasNode() {
-		// TODO Auto-generated method stub
-		return false;
-	}
+
+
+	
 
 }

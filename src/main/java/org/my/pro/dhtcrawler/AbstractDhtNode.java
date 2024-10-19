@@ -2,15 +2,10 @@ package org.my.pro.dhtcrawler;
 
 public abstract class AbstractDhtNode implements LocalDHTNode {
 
-	private byte[] id;
+	protected byte[] id;
 	/** */
-	private int port;
+	protected int port;
 
-	public AbstractDhtNode(byte[] localId, int port) {
-		super();
-		this.id = localId;
-		this.port = port;
-	}
 
 	@Override
 	public byte[] id() {

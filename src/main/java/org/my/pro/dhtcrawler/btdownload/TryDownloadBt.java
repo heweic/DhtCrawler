@@ -1,12 +1,10 @@
 package org.my.pro.dhtcrawler.btdownload;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.input.AutoCloseInputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -14,7 +12,6 @@ import org.my.pro.dhtcrawler.Node;
 import org.my.pro.dhtcrawler.routingTable.DefaultNodeInfo;
 import org.my.pro.dhtcrawler.util.BenCodeUtils;
 import org.my.pro.dhtcrawler.util.DHTUtils;
-import org.my.pro.dhtcrawler.util.GsonUtils;
 
 import be.adaxisoft.bencode.BDecoder;
 import be.adaxisoft.bencode.BEncodedValue;
@@ -110,8 +107,7 @@ public class TryDownloadBt {
 			System.arraycopy(HANDSHAKE_BYTES, 0, sendBytes, 0, 28);
 			System.arraycopy(infoHash, 0, sendBytes, 28, 20);
 			System.arraycopy(peerId, 0, sendBytes, 48, 20);
-			System.out.println(
-					"发送握手消息" + DHTUtils.byteArrayToHexString(sendBytes) + "-------" + sendBytes.length);
+			System.out.println("发送握手消息" + DHTUtils.byteArrayToHexString(sendBytes) + "-------" + sendBytes.length);
 			ctx.channel().writeAndFlush(Unpooled.copiedBuffer(sendBytes));
 
 		}
@@ -159,9 +155,9 @@ public class TryDownloadBt {
 				bf.readBytes(20);// 对方peerID
 
 				if (bf.readableBytes() > 68) {
-					bf.readInt(); //message length
-					bf.readByte();//message type
-					bf.readByte();//message byte
+					bf.readInt(); // message length
+					bf.readByte();// message type
+					bf.readByte();// message byte
 					//
 					byte[] value = new byte[bf.readableBytes() - 68 - 6];
 
@@ -192,36 +188,32 @@ public class TryDownloadBt {
 
 				// 如果是分块数据的第一个包
 				if (isBlockFirst) {
-					
+
 					blockLeftSize = bf.readInt();
-					//nowBlockSize = blockLeftSize;
-					
+					// nowBlockSize = blockLeftSize;
+
 					System.out.println("blockLeftSize" + blockLeftSize);
 					byte pid = bf.readByte();
 					byte dataType = bf.readByte();
-					
+
 					blockLeftSize = blockLeftSize - 2;
-					
-					
-					
+
 					byte[] data = new byte[bf.readableBytes()];
 					bf.readBytes(data);
 					// 块++
 					nextPiece++;
 					// 重置计数器
-			
 
 					BEncodedValue benData = BDecoder.bdecode(ByteBuffer.wrap(data));
-					//int nowPiece = benData.getMap().get("piece").getInt();
+					// int nowPiece = benData.getMap().get("piece").getInt();
 					// 将row_metadata_piece 加入bt
 					int dataLength = BEncoder.encode(benData.getMap()).array().length;
-					
+
 					byte[] rowMetaData = new byte[data.length - dataLength];
 					System.arraycopy(data, dataLength, rowMetaData, 0, rowMetaData.length);
-					
-					//ByteBuf rowMetaData = Unpooled.buffer();
-					
-					
+
+					// ByteBuf rowMetaData = Unpooled.buffer();
+
 					bt.writeBytes(rowMetaData);
 
 					blockLeftSize = blockLeftSize - data.length;
@@ -235,49 +227,48 @@ public class TryDownloadBt {
 					blockLeftSize = blockLeftSize - data.length;
 				}
 				System.out.println("bt size" + bt.readableBytes() + "剩余" + blockLeftSize);
-			
+
 				if (blockLeftSize <= 0) {
 					// 块填充完成，请求下一块数据
 					isBlockFirst = true;
 				}
 				if (blockLeftSize <= 0 && nextPiece > 0 && nextPiece < blockSize) {
 					sendMetadataRequest(ctx, nextPiece);
-				
+
 				}
 				if (blockLeftSize <= 0 && nextPiece == blockSize) {
-					
+
 					System.out.println("下载完成");
 					// 数组组装完成
 					byte[] fullData = new byte[bt.readableBytes()];
 					bt.readBytes(fullData);
-					
-					
+
 					BEncodedValue pieceInfo = BDecoder.bdecode(ByteBuffer.wrap(fullData));
 					BEncodedValue files = pieceInfo.getMap().get("files");
-					//files.get
-					for(BEncodedValue file: files.getList()) {
-						 Map<String,BEncodedValue> map =   file.getMap();
-						 
+					// files.get
+					for (BEncodedValue file : files.getList()) {
+						Map<String, BEncodedValue> map = file.getMap();
+
 						// System.out.println(map.get("path").getString());
 						try {
-							//@TODO 解析文件列表，path.utf-8 path 可能是个文件夹
-							
-							 System.out.println(map.get("ed2k").getString("utf-8"));
-							 System.out.println(map.get("length").getInt());
-							 System.out.println(map.get("path").getString());
-						}catch (Exception e) {
+							// @TODO 解析文件列表，path.utf-8 path 可能是个文件夹
+
+							System.out.println(map.get("ed2k").getString("utf-8"));
+							System.out.println(map.get("length").getInt());
+							System.out.println(map.get("path").getString());
+						} catch (Exception e) {
 							// TODO: handle exception
 						}
 						// System.out.println(map.get("path.utf-8").getString());
 					}
-					
+
 //					byte[] rsData = files.getBytes();
 //					System.out.println(rsData.length);
 //					FileUtils.writeByteArrayToFile(new File("D:\\out.txt"), rsData);
-					//pieceInfo
-				//	BtInfo rs = new BtInfo(btInfo.getMap().get("files"), "");
-					//BtInfo
-				//	System.out.println(GsonUtils.toJsonString(pieceInfo));
+					// pieceInfo
+					// BtInfo rs = new BtInfo(btInfo.getMap().get("files"), "");
+					// BtInfo
+					// System.out.println(GsonUtils.toJsonString(pieceInfo));
 
 				}
 
@@ -294,8 +285,8 @@ public class TryDownloadBt {
 		/**
 		 * 当前快剩余
 		 */
-		//private int nowPieceSub = 16 << 10;
-		//剩余块大小
+		// private int nowPieceSub = 16 << 10;
+		// 剩余块大小
 		private int blockLeftSize;
 
 		public void sendHandshakeMsg(ChannelHandlerContext ctx) throws Exception {

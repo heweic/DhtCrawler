@@ -15,12 +15,12 @@ import org.my.pro.dhtcrawler.util.DHTUtils;
  */
 public class DHTRoutingTable implements RoutingTable {
 
-	private static Log log = LogFactory.getLog(DHTRoutingTable.class);
+	public static Log LOG = LogFactory.getLog(DHTRoutingTable.class);
 
 	/**
 	 * 当前节点ID
 	 */
-	private final byte[] localNodeId;
+	private  byte[] localNodeId;
 	/**
 	 * 每个桶的大小
 	 */
@@ -32,19 +32,47 @@ public class DHTRoutingTable implements RoutingTable {
 	/**
 	 * 桶集合
 	 */
-	private volatile List<List<Node>> buckets = new ArrayList<List<Node>>();
+	private volatile List<List<Node>> buckets = new ArrayList<List<Node>>(bucketSize);
 
-	private volatile boolean hasValue = false;
+
 
 	private Object lock = new Object();
 
 	public DHTRoutingTable(byte[] localNodeId) {
 		this.localNodeId = localNodeId;
 
+		//初始化容器
 		for (int i = 0; i < bucketSize; i++) {
 			buckets.add(new ArrayList<>());
 		}
 	}
+	
+	
+
+	@Override
+	public void resetNodeId(byte[] id) {
+		synchronized (lock) {
+			//更新nodeID
+			this.localNodeId = id;
+			
+			//重置桶中节点所在位置
+			List<List<Node>> old = buckets;
+			buckets = new ArrayList<List<Node>>(bucketSize);
+			for (int i = 0; i < bucketSize; i++) {
+				buckets.add(new ArrayList<>());
+			}
+			
+			for(List<Node> bucket : old) {
+				for(Node node : bucket) {
+					add(node);
+				}	
+			}
+			
+		}
+		
+	}
+
+
 
 	@Override
 	public void add(Node node) {
@@ -70,9 +98,7 @@ public class DHTRoutingTable implements RoutingTable {
 					handleFullBucket(bucket, node);
 				}
 			}
-			if (!hasValue) {
-				hasValue = true;
-			}
+			
 		}
 
 	}
@@ -132,11 +158,6 @@ public class DHTRoutingTable implements RoutingTable {
 	}
 
 	@Override
-	public boolean hasNode() {
-		return hasValue;
-	}
-
-	@Override
 	public List<Node> randomNodes(int num) {
 		return getRandomEntries(num);
 	}
@@ -176,5 +197,29 @@ public class DHTRoutingTable implements RoutingTable {
 
 		//
 		return reservoir;
+	}
+	
+	public static void main(String[] args) {
+		String a = new String("123");
+		String b = a;
+		a = null;
+		System.out.println(a);
+		System.out.println(b);
+		
+		//
+		List<String> list = new ArrayList<String>();
+		list.add("1");
+		List<String> list2 = list;
+		list = null;
+		
+		System.out.println(list2.size());
+		
+		
+		
+		
+		
+		
+		
+		
 	}
 }

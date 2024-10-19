@@ -22,6 +22,6 @@ public class NodeS {
 	}
 
 	public static void main(String[] args) {
-		new NodeS().start(20);
+		new NodeS().start(5);
 	}
 }

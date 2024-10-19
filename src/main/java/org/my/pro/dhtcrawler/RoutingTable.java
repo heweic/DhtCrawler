@@ -35,11 +35,7 @@ public interface RoutingTable {
 	 */
 	public List<Node> randomNodes(int num);
 	
-	/**
-	 *  是否有节点
-	 * @return
-	 */
-	public boolean hasNode();
+
 	
 	/**
 	 * 目标节点与当前节点距离Index桶中是否有节点表数量
@@ -47,5 +43,11 @@ public interface RoutingTable {
 	 * @return
 	 */
 	public int targetSize(byte[] target);
+	
+	/**
+	 * 重新设置当前节点ID
+	 * @param id
+	 */
+	public void resetNodeId(byte[] id);
 
 }

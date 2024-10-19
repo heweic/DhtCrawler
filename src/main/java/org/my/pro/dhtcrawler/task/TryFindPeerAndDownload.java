@@ -1,14 +1,11 @@
 package org.my.pro.dhtcrawler.task;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.my.pro.dhtcrawler.DHTTask;
@@ -33,28 +30,18 @@ import io.netty.buffer.Unpooled;
 public class TryFindPeerAndDownload implements DHTTask {
 
 	private LocalDHTNode node;
-	private ExecutorService tryFindPeerExe = Executors.newFixedThreadPool(10);
-	private ExecutorService downloadTorrentExe = Executors.newCachedThreadPool();
+	private ExecutorService tryFindPeerExe;
+	private ExecutorService downloadTorrentExe;
 	private static Log log = LogFactory.getLog(TryFindPeerAndDownload.class);
-	private CountDownLatch countDownLatch = new CountDownLatch(1);
 
-	private static String canonicalPath;
+	private volatile boolean state = false;
 
-	static {
-		try {
-			canonicalPath = new File("").getCanonicalPath();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-	private File file = new File(canonicalPath + "/data/hash.txt");
-	public static String NEW_LINE = System.getProperty("line.separator");
+	private ConcurrentHashMap<String, Object> downingHash;
+	private Object empty = new Object();
 
 	public TryFindPeerAndDownload(LocalDHTNode node) {
 		super();
 		this.node = node;
-		//
-
 	}
 
 	/**
@@ -63,35 +50,23 @@ public class TryFindPeerAndDownload implements DHTTask {
 	 * @param hash
 	 */
 	public void subTask(byte[] hash) {
-		try {
-			countDownLatch.await();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		if (!state) {
+			return;
 		}
-		writeHashToFile(hash);
+		// 如果提交哈希正在执行下载,防止连续提交
+		if (downingHash.containsKey(DHTUtils.byteArrayToHexString(hash))) {
+			return;
+		}
+		//
+
 		tryFindPeerExe.execute(new RunTask(hash));
 	}
 
-	private void writeHashToFile(byte[] hash) {
-		try {
-
-			String line = DHTUtils.byteArrayToHexString(node.id()) + ":" + node.port() + ":"+DHTUtils.byteArrayToHexString(hash)+ NEW_LINE;
-			FileUtils.writeStringToFile(file, line, true);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-
 	public void subTask(String ip, int port, byte[] hash) {
-		try {
-			countDownLatch.await();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		if (!state) {
+			return;
 		}
-		writeHashToFile(hash);
+
 		downloadTorrentExe.execute(new Runnable() {
 
 			@Override
@@ -118,14 +93,19 @@ public class TryFindPeerAndDownload implements DHTTask {
 			byte[] targetHash = hash;
 			List<Node> nodes = node.findNearest(targetHash);
 
+			downingHash.put(DHTUtils.byteArrayToHexString(targetHash), empty);
+
 			log.info("开始尝试下载:" + DHTUtils.byteArrayToHexString(targetHash));
 			List<Node> peers = new ArrayList<Node>();
 			for (Node n : nodes) {
 				getPerrs(peers, n.ip(), n.port(), targetHash);
 			}
+			log.info(DHTUtils.byteArrayToHexString(targetHash) + "找到peer数:" + peers.size());
 			for (Node peer : peers) {
 				subTask(peer.ip(), peer.port(), targetHash);
 			}
+			//
+			downingHash.remove(DHTUtils.byteArrayToHexString(targetHash));
 
 		}
 
@@ -188,14 +168,25 @@ public class TryFindPeerAndDownload implements DHTTask {
 
 	@Override
 	public synchronized void start() {
+		if (state) {
+			return;
+		}
+		tryFindPeerExe = Executors.newFixedThreadPool(8);
+		downloadTorrentExe = Executors.newCachedThreadPool();
+		state = true;
+		downingHash = new ConcurrentHashMap<String, Object>();
 		log.info(DHTUtils.byteArrayToHexString(node.id()) + "Bt下载模块启动");
-		countDownLatch.countDown();
 	}
 
 	@Override
 	public void stop() {
+		if (!state) {
+			return;
+		}
 		tryFindPeerExe.shutdown();
 		downloadTorrentExe.shutdown();
-		this.countDownLatch = new CountDownLatch(1);
+		state = false;
+		downingHash.clear();
+		log.info(DHTUtils.byteArrayToHexString(node.id()) + "Bt下载模块关闭");
 	}
 }

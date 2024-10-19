@@ -4,7 +4,6 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.conn.routing.HttpRoute;
-import org.apache.http.util.EntityUtils;
 import org.my.pro.dhtcrawler.saver.MagnetSaver;
 import org.my.pro.dhtcrawler.saver.TxtMagnetSaver;
 
@@ -41,8 +40,8 @@ public class ItorrentsMagnetTo extends HttpMagnetToTorrent {
 	public BtInfo handlerEntity(HttpEntity entity, String hash) throws Exception {
 
 		try {
-			//String result = EntityUtils.toString(entity);
-			
+			// String result = EntityUtils.toString(entity);
+
 			BEncodedValue value = BDecoder.decode(entity.getContent());
 			return new BtInfo(value, hash);
 

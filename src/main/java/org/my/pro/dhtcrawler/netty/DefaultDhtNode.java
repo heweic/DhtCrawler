@@ -1,5 +1,8 @@
 package org.my.pro.dhtcrawler.netty;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -7,6 +10,8 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.my.pro.dhtcrawler.AbstractDhtNode;
@@ -24,6 +29,7 @@ import org.my.pro.dhtcrawler.handler.GetPeersHandler;
 import org.my.pro.dhtcrawler.handler.PingHandler;
 import org.my.pro.dhtcrawler.handler.RequestMessageHandler;
 import org.my.pro.dhtcrawler.handler.ResponseMessageHandler;
+import org.my.pro.dhtcrawler.message.DefaultRequest;
 import org.my.pro.dhtcrawler.routingTable.DHTRoutingTable;
 import org.my.pro.dhtcrawler.task.CleanTimeOutFuture;
 import org.my.pro.dhtcrawler.task.DHTCrawler;
@@ -31,6 +37,7 @@ import org.my.pro.dhtcrawler.task.TryFindPeerAndDownload;
 import org.my.pro.dhtcrawler.util.DHTUtils;
 import org.my.pro.dhtcrawler.util.GsonUtils;
 
+import be.adaxisoft.bencode.InvalidBEncodingException;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -59,18 +66,73 @@ public class DefaultDhtNode extends AbstractDhtNode {
 	private CleanTimeOutFuture cleanTimeOutFuture;
 	private DHTCrawler dhtCrawler;
 
-	private ConcurrentHashMap<String, Future> futures = new ConcurrentHashMap<>();
+	private ConcurrentHashMap<String, Future> futures;
+
+	// 获得哈希时间
+	private long hashTime = System.currentTimeMillis();
+	
+	//
+	private static String canonicalPath;
+
+	static {
+		try {
+			canonicalPath = new File("").getCanonicalPath();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	private File file = new File(canonicalPath + "/data/hash.txt");
+	public static String NEW_LINE = System.getProperty("line.separator");
+	
 
 	public DefaultDhtNode(byte[] id, int port) {
-		super(id, port);
+		this(id, port, true);
+	}
+
+	public DefaultDhtNode(byte[] id, int port, boolean runBep09) {
+
 		//
 		if (id.length != 20) {
 			throw new IllegalArgumentException();
 		}
 		//
-		this.tryCrawlingTorrent = new TryFindPeerAndDownload(this);
+		this.id = id;
+		this.port = port;
+		if(runBep09) {
+			this.tryCrawlingTorrent = new TryFindPeerAndDownload(this);
+		}
 		this.cleanTimeOutFuture = new CleanTimeOutFuture(this);
 		this.dhtCrawler = new DHTCrawler(this);
+
+	}
+
+	private static long TIME_OUT = 1000 * 60 * 2;
+
+	private void writeHashToFile(byte[] hash) {
+		try {
+
+			String line = DHTUtils.byteArrayToHexString(id()) + ":" + port() + ":"
+					+ DHTUtils.byteArrayToHexString(hash) + NEW_LINE +":" + FastDateFormat.getInstance("yyyy/MM/dd HH:mm:ss").format(new Date());
+			FileUtils.writeStringToFile(file, line, true);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	@Override
+	public boolean hasGetHash() {
+		return System.currentTimeMillis() - hashTime < TIME_OUT;
+	}
+
+	@Override
+	public void resetId(byte[] id) {
+		log.info(DHTUtils.byteArrayToHexString(this.id) + "更换ID到:" + DHTUtils.byteArrayToHexString(id));
+		this.id = id;
+		//
+		routingTable.resetNodeId(id);
+		//
+		hashTime = System.currentTimeMillis();
 
 	}
 
@@ -145,6 +207,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 	public void start() {
 
 		routingTable = new DHTRoutingTable(id());
+		futures = new ConcurrentHashMap<>();
 		// DefaultDhtNode localNode = new DefaultDhtNode(id(), port(),routingTable);
 
 		// 以下ID 用于回复
@@ -155,10 +218,31 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 			@Override
 			public void handler(byte[] hash, KrpcMessage message) {
+				//
+				hashTime = System.currentTimeMillis();
+				writeHashToFile(hash);
+				//
 				tryCrawlingTorrent.subTask(hash);
 			}
 		}));
-		map.put(KeyWord.ANNOUNCE_PEER, new AnnouncePeerHandler(this, tryCrawlingTorrent));
+		map.put(KeyWord.ANNOUNCE_PEER, new AnnouncePeerHandler(this, new WorkHandler() {
+
+			@Override
+			public void handler(byte[] hash, KrpcMessage message) {
+				//
+				hashTime = System.currentTimeMillis();
+				writeHashToFile(hash);
+				//
+				DefaultRequest defaultRequest = (DefaultRequest) message;
+				try {
+					tryCrawlingTorrent.subTask(message.addr().getAddress().getHostAddress(),
+							defaultRequest.a().getMap().get("port").getInt(), hash);
+				} catch (InvalidBEncodingException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}));
 		//
 		responseMessageHandler = new DefaultResponseHandler(routingTable, this);
 
@@ -223,7 +307,9 @@ public class DefaultDhtNode extends AbstractDhtNode {
 		}
 
 		//
-		tryCrawlingTorrent.start();
+		if(null != tryCrawlingTorrent) {
+			tryCrawlingTorrent.start();
+		}
 		cleanTimeOutFuture.start();
 		dhtCrawler.start();
 	}
@@ -241,9 +327,20 @@ public class DefaultDhtNode extends AbstractDhtNode {
 		if (null != group) {
 			group.shutdownGracefully();
 		}
-		tryCrawlingTorrent.stop();
-		cleanTimeOutFuture.stop();
-		dhtCrawler.stop();
+		if(tryCrawlingTorrent != null) {
+			tryCrawlingTorrent.stop();
+		}
+		if(cleanTimeOutFuture != null) {
+			cleanTimeOutFuture.stop();
+		}
+		if(null != dhtCrawler) {
+			dhtCrawler.stop();
+		}
+		
+		if(null != futures) {
+			futures.clear();
+		}
+
 	}
 
 	@Override

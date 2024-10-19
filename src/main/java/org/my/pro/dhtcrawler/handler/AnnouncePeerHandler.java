@@ -3,9 +3,9 @@ package org.my.pro.dhtcrawler.handler;
 import org.my.pro.dhtcrawler.KeyWord;
 import org.my.pro.dhtcrawler.KrpcMessage;
 import org.my.pro.dhtcrawler.LocalDHTNode;
+import org.my.pro.dhtcrawler.WorkHandler;
 import org.my.pro.dhtcrawler.message.DefaultRequest;
 import org.my.pro.dhtcrawler.message.DefaultResponse;
-import org.my.pro.dhtcrawler.task.TryFindPeerAndDownload;
 import org.my.pro.dhtcrawler.util.BenCodeUtils;
 import org.my.pro.dhtcrawler.util.DHTUtils;
 import org.slf4j.Logger;
@@ -21,13 +21,14 @@ import org.slf4j.LoggerFactory;
  */
 public class AnnouncePeerHandler extends RequestMessageHandler {
 
-	private TryFindPeerAndDownload downLoadTorrent;
+	private WorkHandler workHandler;
 
 	private static Logger logger = LoggerFactory.getLogger(AnnouncePeerHandler.class);
 
-	public AnnouncePeerHandler(LocalDHTNode dhtNode, TryFindPeerAndDownload downLoadTorrent) {
+	public AnnouncePeerHandler(LocalDHTNode dhtNode, WorkHandler workHandler) {
 		super(dhtNode);
-		this.downLoadTorrent = downLoadTorrent;
+
+		this.workHandler = workHandler;
 	}
 
 	@Override
@@ -43,8 +44,9 @@ public class AnnouncePeerHandler extends RequestMessageHandler {
 					+ DHTUtils.byteArrayToHexString(hash);
 			logger.info(mes);
 
-			downLoadTorrent.subTask(message.addr().getAddress().getHostAddress(),
-					defaultRequest.a().getMap().get("port").getInt(), hash);
+			if (workHandler != null) {
+				workHandler.handler(hash, message);
+			}
 		}
 
 		DefaultResponse defaultResponse = new DefaultResponse(message.t(), message.addr());

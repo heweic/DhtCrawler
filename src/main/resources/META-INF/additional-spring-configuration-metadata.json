@@ -1,0 +1,17 @@
+{"properties": [
+  {
+    "name": "dht.num",
+    "type": "java.lang.String",
+    "description": "DHT　节点数量"
+  },
+  {
+    "name": "dht.port",
+    "type": "java.lang.String",
+    "description": "开始端口，如有多个"
+  },
+  {
+    "name": "dht.runbep09",
+    "type": "java.lang.String",
+    "description": "是否启用ＢＥＰ００扩展协议下载ｔｏｒｒｅｎｔ"
+  }
+]}

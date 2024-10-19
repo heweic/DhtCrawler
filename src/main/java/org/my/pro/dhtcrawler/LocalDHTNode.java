@@ -79,5 +79,13 @@ public interface LocalDHTNode {
 	 */
 	public int targetSize(byte[] target);
 	
-	
+	/**
+	 * 重置节点ID
+	 */
+	public void resetId(byte[] id);
+	/**
+	 * 时间段内是否获得哈希
+	 * @return
+	 */
+	public boolean hasGetHash();
 }
