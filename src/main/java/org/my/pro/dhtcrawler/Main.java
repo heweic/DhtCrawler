@@ -3,7 +3,7 @@ package org.my.pro.dhtcrawler;
 import org.my.pro.dhtcrawler.netty.DefaultDhtNode;
 import org.my.pro.dhtcrawler.util.DHTUtils;
 
-public class NodeS {
+public class Main {
 
 	public void start(int num) {
 
@@ -22,6 +22,6 @@ public class NodeS {
 	}
 
 	public static void main(String[] args) {
-		new NodeS().start(5);
+		new Main().start(5);
 	}
 }

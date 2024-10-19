@@ -2,16 +2,16 @@
   {
     "name": "dht.num",
     "type": "java.lang.String",
-    "description": "DHT　节点数量"
+    "description": "DHT节点数量"
   },
   {
     "name": "dht.port",
     "type": "java.lang.String",
-    "description": "开始端口，如有多个"
+    "description": "起始端口"
   },
   {
     "name": "dht.runbep09",
     "type": "java.lang.String",
-    "description": "是否启用ＢＥＰ００扩展协议下载ｔｏｒｒｅｎｔ"
+    "description": "是否启用BEP09扩展协议下载torrent，TCP连接，能成功获取概率不大"
   }
 ]}

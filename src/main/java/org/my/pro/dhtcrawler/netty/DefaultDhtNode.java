@@ -112,7 +112,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 		try {
 
 			String line = DHTUtils.byteArrayToHexString(id()) + ":" + port() + ":"
-					+ DHTUtils.byteArrayToHexString(hash) + NEW_LINE +":" + FastDateFormat.getInstance("yyyy/MM/dd HH:mm:ss").format(new Date());
+					+ DHTUtils.byteArrayToHexString(hash) +":" + FastDateFormat.getInstance("yyyy/MM/dd HH:mm:ss").format(new Date()) + NEW_LINE ;
 			FileUtils.writeStringToFile(file, line, true);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
