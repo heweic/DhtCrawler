@@ -18,6 +18,8 @@ public class DHTUtils {
 
 	public static UniformRandomProvider rng = RandomSource.XO_RO_SHI_RO_128_PP.create();
 
+	public final static byte[] MAX_NODE_ID = hexStringToByteArray("ffffffffffffffffffffffffffffffffffffffff");
+
 	public static Node readNodeInfo(ByteBuf buffer) {
 
 		byte[] id = new byte[20];
@@ -128,13 +130,9 @@ public class DHTUtils {
 		System.arraycopy(random, 0, peerId, 1, 19);
 		return peerId;
 	}
+
 	public static void nextBytes(byte[] bs) {
 		rng.nextBytes(bs);
-	}
-	
-	public static void main(String[] args) {
-		System.out.println(Byte.MIN_VALUE);
-		System.out.println(Byte.MAX_VALUE);
 	}
 
 }

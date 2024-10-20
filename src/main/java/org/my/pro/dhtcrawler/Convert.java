@@ -44,7 +44,7 @@ public class Convert {
 		return convert;
 	}
 
-	private void work() {
+	public void work() {
 		// 加载
 		if (isRun.get()) {
 			return;

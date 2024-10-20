@@ -62,7 +62,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 	private ResponseMessageHandler responseMessageHandler;
 
-	private TryFindPeerAndDownload tryCrawlingTorrent;
+	private TryFindPeerAndDownload downloadTorrent;
 	private CleanTimeOutFuture cleanTimeOutFuture;
 	private DHTCrawler dhtCrawler;
 
@@ -70,7 +70,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 	// 获得哈希时间
 	private long hashTime = System.currentTimeMillis();
-	
+
 	//
 	private static String canonicalPath;
 
@@ -83,7 +83,6 @@ public class DefaultDhtNode extends AbstractDhtNode {
 	}
 	private File file = new File(canonicalPath + "/data/hash.txt");
 	public static String NEW_LINE = System.getProperty("line.separator");
-	
 
 	public DefaultDhtNode(byte[] id, int port) {
 		this(id, port, true);
@@ -98,28 +97,29 @@ public class DefaultDhtNode extends AbstractDhtNode {
 		//
 		this.id = id;
 		this.port = port;
-		if(runBep09) {
-			this.tryCrawlingTorrent = new TryFindPeerAndDownload(this);
+		if (runBep09) {
+			this.downloadTorrent = TryFindPeerAndDownload.getInstance();
+			this.downloadTorrent.register(this);
 		}
 		this.cleanTimeOutFuture = new CleanTimeOutFuture(this);
 		this.dhtCrawler = new DHTCrawler(this);
 
 	}
 
-	private static long TIME_OUT = 1000 * 60 * 2;
+	private static long TIME_OUT = 1000 * 60 * 1;
 
 	private void writeHashToFile(byte[] hash) {
 		try {
 
-			String line = DHTUtils.byteArrayToHexString(id()) + ":" + port() + ":"
-					+ DHTUtils.byteArrayToHexString(hash) +":" + FastDateFormat.getInstance("yyyy/MM/dd HH:mm:ss").format(new Date()) + NEW_LINE ;
+			String line = DHTUtils.byteArrayToHexString(id()) + ":" + port() + ":" + DHTUtils.byteArrayToHexString(hash)
+					+ ":" + FastDateFormat.getInstance("yyyy/MM/dd HH:mm:ss").format(new Date()) + NEW_LINE;
 			FileUtils.writeStringToFile(file, line, true);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
-	
+
 	@Override
 	public boolean hasGetHash() {
 		return System.currentTimeMillis() - hashTime < TIME_OUT;
@@ -170,7 +170,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 	@Override
 	public void tryDownLoad(byte[] hash) {
-		this.tryCrawlingTorrent.subTask(hash);
+		this.downloadTorrent.subTask(hash);
 	}
 
 	@Override
@@ -222,7 +222,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 				hashTime = System.currentTimeMillis();
 				writeHashToFile(hash);
 				//
-				tryCrawlingTorrent.subTask(hash);
+				downloadTorrent.subTask(hash);
 			}
 		}));
 		map.put(KeyWord.ANNOUNCE_PEER, new AnnouncePeerHandler(this, new WorkHandler() {
@@ -235,7 +235,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 				//
 				DefaultRequest defaultRequest = (DefaultRequest) message;
 				try {
-					tryCrawlingTorrent.subTask(message.addr().getAddress().getHostAddress(),
+					downloadTorrent.subTask(message.addr().getAddress().getHostAddress(),
 							defaultRequest.a().getMap().get("port").getInt(), hash);
 				} catch (InvalidBEncodingException e) {
 					// TODO Auto-generated catch block
@@ -307,8 +307,8 @@ public class DefaultDhtNode extends AbstractDhtNode {
 		}
 
 		//
-		if(null != tryCrawlingTorrent) {
-			tryCrawlingTorrent.start();
+		if (null != downloadTorrent) {
+			downloadTorrent.start();
 		}
 		cleanTimeOutFuture.start();
 		dhtCrawler.start();
@@ -327,17 +327,17 @@ public class DefaultDhtNode extends AbstractDhtNode {
 		if (null != group) {
 			group.shutdownGracefully();
 		}
-		if(tryCrawlingTorrent != null) {
-			tryCrawlingTorrent.stop();
+		if (downloadTorrent != null) {
+			downloadTorrent.stop();
 		}
-		if(cleanTimeOutFuture != null) {
+		if (cleanTimeOutFuture != null) {
 			cleanTimeOutFuture.stop();
 		}
-		if(null != dhtCrawler) {
+		if (null != dhtCrawler) {
 			dhtCrawler.stop();
 		}
-		
-		if(null != futures) {
+
+		if (null != futures) {
 			futures.clear();
 		}
 
