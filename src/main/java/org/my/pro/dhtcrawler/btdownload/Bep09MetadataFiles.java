@@ -98,9 +98,9 @@ public class Bep09MetadataFiles {
 	private static int DOWNLOAD_TIME_OUT = CONNECT_TIMEOUT_MILLIS + 8000;
 	private static int SO_RCVBUF = 1024 * 500;
 
-	private String logMes(String mes) {
-		return "连接到" + peerIp + "：" + peerPort + "下载:" + DHTUtils.byteArrayToHexString(hash) + "---"
-				+ (null == mes ? "" : mes);
+	private void logMes(String mes) {
+		log.info("连接到" + peerIp + "：" + peerPort + "下载:" + DHTUtils.byteArrayToHexString(hash) + "---"
+				+ (null == mes ? "" : mes));
 	}
 
 	public boolean get() {
@@ -153,7 +153,7 @@ public class Bep09MetadataFiles {
 			ChannelFuture channelFuture = bootstrap.connect(peerIp, peerPort);
 			channelFuture.addListener(future -> {
 				if (future.isSuccess()) {
-					log.info(logMes("连接成功!"));
+					logMes("连接成功!");
 				} else {
 					close();
 				}
@@ -165,7 +165,6 @@ public class Bep09MetadataFiles {
 			channelFuture.channel().closeFuture().await();
 		} catch (Exception e) {
 			isDownload.countDown();
-			log.error(logMes(e.getMessage()));
 		} finally {
 			group.shutdownGracefully();
 		}
@@ -221,7 +220,7 @@ public class Bep09MetadataFiles {
 				BitTorrent bt = new BitTorrent();
 				bf.markReaderIndex();
 				bt.setLength(bf.readInt());
-				if(bt.getLength() < bf.readableBytes()) {
+				if (bt.getLength() < bf.readableBytes()) {
 					//
 					bf.resetReaderIndex();
 					return;
@@ -310,8 +309,8 @@ public class Bep09MetadataFiles {
 
 		@Override
 		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-		//	cause.printStackTrace();
-			log.error(logMes(cause.getMessage()));
+			// cause.printStackTrace();
+//			log.error(logMes(cause.getMessage()));
 			close();
 		}
 

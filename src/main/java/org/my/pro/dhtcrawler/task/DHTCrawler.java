@@ -12,8 +12,7 @@ import org.my.pro.dhtcrawler.message.MessageFactory;
 import org.my.pro.dhtcrawler.util.DHTUtils;
 
 /**
- * @author hew
- * 爬虫核心逻辑;不断的发送find_node 认识更多的节点 如果当前节点，长时间未获得哈希，修改当前节点ID
+ * @author hew 爬虫核心逻辑;不断的发送find_node 认识更多的节点 如果当前节点，长时间未获得哈希，修改当前节点ID
  */
 public class DHTCrawler implements DHTTask {
 
@@ -25,6 +24,8 @@ public class DHTCrawler implements DHTTask {
 
 	private volatile boolean state = false;
 
+	private long changeTime = System.currentTimeMillis();
+
 	public DHTCrawler(LocalDHTNode dhtNode) {
 		super();
 		this.dhtNode = dhtNode;
@@ -34,13 +35,19 @@ public class DHTCrawler implements DHTTask {
 			public void run() {
 				//
 				while (!Thread.currentThread().isInterrupted()) {
-					//判断是否需要更换节点ID
-					if(!dhtNode.hasGetHash()) {
-						
+
+					// 如果时间段内未获得哈希更换ID
+					if (!dhtNode.hasGetHash()) {
 						dhtNode.resetId(DHTUtils.generateNodeId());
+						changeTime = System.currentTimeMillis();
+					} else {
+						// 如果长时间持有一个ID，更换ID
+						if (System.currentTimeMillis() - changeTime >= 1000 * 60 * 2) {
+							dhtNode.resetId(DHTUtils.generateNodeId());
+							changeTime = System.currentTimeMillis();
+						}
 					}
-					
-					
+
 					// 根据自身ID，查询自己距离较近的节点并建立联系
 					try {
 						// 尽可能均匀的生成剩下19个byte，空间的节点
