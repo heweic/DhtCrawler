@@ -11,6 +11,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.input.AutoCloseInputStream;
 import org.apache.commons.logging.Log;
@@ -170,6 +171,7 @@ public class Bep09MetadataFiles {
 
 			channelFuture.channel().closeFuture().await();
 		} catch (Exception e) {
+			//e.printStackTrace();
 			isDownload.countDown();
 		} finally {
 			group.shutdownGracefully();
@@ -374,7 +376,11 @@ public class Bep09MetadataFiles {
 
 	private static final ConcurrentHashMap<String, Object> lockMap = new ConcurrentHashMap<String, Object>();
 
-	private void synWriteBytesToFile(String hash, byte[] bs) {
+	private void synWriteBytesToFile(String hash, byte[] bs) throws Exception{
+		//校验数据完整性
+		if(!DigestUtils.sha1Hex(bs).equals(hash)) {
+			throw new Exception(hash + "数据SHA1校验失败!");
+		}
 		Object lock = lockMap.computeIfAbsent(hash, key -> new Object());
 		synchronized (lock) {
 			try {

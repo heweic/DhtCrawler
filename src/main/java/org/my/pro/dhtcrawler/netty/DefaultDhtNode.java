@@ -18,6 +18,7 @@ import org.my.pro.dhtcrawler.AbstractDhtNode;
 import org.my.pro.dhtcrawler.Future;
 import org.my.pro.dhtcrawler.KeyWord;
 import org.my.pro.dhtcrawler.KrpcMessage;
+import org.my.pro.dhtcrawler.LocalDHTNode;
 import org.my.pro.dhtcrawler.Node;
 import org.my.pro.dhtcrawler.RoutingTable;
 import org.my.pro.dhtcrawler.WorkHandler;
@@ -106,7 +107,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 	}
 
-	private static long TIME_OUT = 1000 * 60 * 1;
+	private static long TIME_OUT = 1000 * 60 * 2;
 
 	private void writeHashToFile(byte[] hash, String code) {
 		try {
@@ -170,7 +171,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 	@Override
 	public void tryDownLoad(byte[] hash) {
-		this.downloadTorrent.subTask_announce_peer(hash);
+		this.downloadTorrent.subTask_announce_peer(hash, this);
 	}
 
 	@Override
@@ -203,6 +204,57 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 	private CountDownLatch initNettyCountDownLatch = new CountDownLatch(1);
 
+	class getPeerHandler implements WorkHandler {
+
+		private LocalDHTNode localDHTNode;
+
+		public getPeerHandler(LocalDHTNode localDHTNode) {
+
+			this.localDHTNode = localDHTNode;
+		}
+
+		@Override
+		public void handler(byte[] hash, KrpcMessage message) {
+			hashTime = System.currentTimeMillis();
+			writeHashToFile(hash, KeyWord.GET_PEERS);
+			// get_peers获得的哈希数较多,能成功下载的概率并不大,可概率减少任务提交，腾出位置给announce_peer
+			if (DHTUtils.rng.nextInt(0, 3) != 0) {
+				// 三分之一概率丢任务
+				downloadTorrent.subTask_findpeers(hash, localDHTNode);
+			}
+		}
+
+	}
+
+	class announcePeerHandler implements WorkHandler {
+
+		private LocalDHTNode dhtNode;
+
+		public announcePeerHandler(LocalDHTNode dhtNode) {
+			super();
+			this.dhtNode = dhtNode;
+		}
+
+		@Override
+		public void handler(byte[] hash, KrpcMessage message) {
+			hashTime = System.currentTimeMillis();
+			writeHashToFile(hash, KeyWord.ANNOUNCE_PEER);
+			//
+			DefaultRequest defaultRequest = (DefaultRequest) message;
+			try {
+				// 直接提交下载任务
+				downloadTorrent.subTask(message.addr().getAddress().getHostAddress(),
+						defaultRequest.a().getMap().get("port").getInt(), hash, true);
+				// 重新查找perrs再下载
+				downloadTorrent.subTask_announce_peer(hash, dhtNode);
+			} catch (InvalidBEncodingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+
+	}
+
 	@Override
 	public void start() {
 
@@ -214,38 +266,8 @@ public class DefaultDhtNode extends AbstractDhtNode {
 		HashMap<String, RequestMessageHandler> map = new HashMap<>();
 		map.put(KeyWord.PING, new PingHandler(this));
 		map.put(KeyWord.FIND_NODE, new FindNodeHandler(this));
-		map.put(KeyWord.GET_PEERS, new GetPeersHandler(this, new WorkHandler() {
-
-			@Override
-			public void handler(byte[] hash, KrpcMessage message) {
-				//
-				hashTime = System.currentTimeMillis();
-				writeHashToFile(hash, KeyWord.GET_PEERS);
-				// get_peers获得的哈希数较多,能成功下载的概率并不大,可概率减少任务提交，腾出位置给announce_peer
-				downloadTorrent.subTask_findpeers(hash);
-			}
-		}));
-		map.put(KeyWord.ANNOUNCE_PEER, new AnnouncePeerHandler(this, new WorkHandler() {
-
-			@Override
-			public void handler(byte[] hash, KrpcMessage message) {
-				//
-				hashTime = System.currentTimeMillis();
-				writeHashToFile(hash, KeyWord.ANNOUNCE_PEER);
-				//
-				DefaultRequest defaultRequest = (DefaultRequest) message;
-				try {
-					// 直接提交下载任务
-					downloadTorrent.subTask(message.addr().getAddress().getHostAddress(),
-							defaultRequest.a().getMap().get("port").getInt(), hash, true);
-					// 重新查找perrs再下载
-					downloadTorrent.subTask_announce_peer(hash);
-				} catch (InvalidBEncodingException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-		}));
+		map.put(KeyWord.GET_PEERS, new GetPeersHandler(this, new getPeerHandler(this)));
+		map.put(KeyWord.ANNOUNCE_PEER, new AnnouncePeerHandler(this, new announcePeerHandler(this)));
 		//
 		responseMessageHandler = new DefaultResponseHandler(routingTable, this);
 

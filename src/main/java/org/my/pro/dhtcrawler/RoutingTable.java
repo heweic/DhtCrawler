@@ -27,25 +27,18 @@ public interface RoutingTable {
 	 * @return
 	 */
 	public List<Node> getClosestNodes(byte[] targetId, int count);
-	
-	/**
-	 * 随机抓node
-	 * @param num
-	 * @return
-	 */
-	public List<Node> randomNodes(int num);
-	
 
-	
 	/**
 	 * 目标节点与当前节点距离Index桶中是否有节点表数量
+	 * 
 	 * @param target
 	 * @return
 	 */
 	public int targetSize(byte[] target);
-	
+
 	/**
 	 * 重新设置当前节点ID
+	 * 
 	 * @param id
 	 */
 	public void resetNodeId(byte[] id);

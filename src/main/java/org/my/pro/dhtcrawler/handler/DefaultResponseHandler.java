@@ -29,18 +29,18 @@ public class DefaultResponseHandler extends ResponseMessageHandler {
 
 		if (message instanceof DefaultResponse) {
 			//需要处理callBack的是find_peer，返回的节点不添加到自身的节点表
-			boolean rs = localNode.back(message);
+			localNode.back(message);
 			//
 
 			try {
 				DefaultResponse defaultResponse = (DefaultResponse) message;
-				// 发现的新节且是find_node的响应
-				if (defaultResponse.r().getMap().containsKey(KeyWord.NODES) && !rs) {
+				// 
+				if (defaultResponse.r().getMap().containsKey(KeyWord.NODES) ) {
 					byte[] bs = defaultResponse.r().getMap().get(KeyWord.NODES).getBytes();
 
 					ByteBuf byteBuf = Unpooled.wrappedBuffer(bs);
 					int num = bs.length / 26;
-					// 添加新节点
+					// DHT routingtable添加节点
 					for (int i = 0; i < num; i++) {
 						Node info = DHTUtils.readNodeInfo(byteBuf);
 						localNode.add(info);

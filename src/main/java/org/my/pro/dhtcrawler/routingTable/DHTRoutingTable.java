@@ -1,8 +1,10 @@
 package org.my.pro.dhtcrawler.routingTable;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,106 +35,85 @@ public class DHTRoutingTable implements RoutingTable {
 	/**
 	 * 桶集合
 	 */
-	private volatile List<List<Node>> buckets = new ArrayList<List<Node>>(bucketSize);
-
-	private Object lock = new Object();
+	private volatile List<ConcurrentSkipListMap<BigInteger, Node>> buckets = new ArrayList<ConcurrentSkipListMap<BigInteger, Node>>(
+			bucketSize);
 
 	public DHTRoutingTable(byte[] localNodeId) {
 		this.localNodeId = localNodeId;
 
 		// 初始化容器
 		for (int i = 0; i < bucketSize; i++) {
-			buckets.add(new ArrayList<>());
+			buckets.add(new ConcurrentSkipListMap<BigInteger, Node>());
 		}
 	}
 
 	@Override
 	public void resetNodeId(byte[] id) {
-		synchronized (lock) {
-			// 更新nodeID
-			this.localNodeId = id;
-
-			// 重置桶中节点所在位置
-			List<List<Node>> old = buckets;
-			buckets = new ArrayList<List<Node>>(bucketSize);
-			for (int i = 0; i < bucketSize; i++) {
-				buckets.add(new ArrayList<>());
-			}
-
-			for (List<Node> bucket : old) {
-				for (Node node : bucket) {
-					add(node);
-				}
-			}
-
-		}
+		// 仅更新，不做复杂的桶元素位置重置
+		this.localNodeId = id;
 
 	}
 
 	@Override
 	public void add(Node node) {
-		synchronized (lock) {
-			// 判断节点是否是已经存在
-			for (List<Node> bucket : buckets) {
-				for (Node n : bucket) {
-					if (n.nodeId().id().equals(node.nodeId().id())) {
-						// 已经存在
-						return;
-					}
-				}
-			}
-			TryFindPeerAndDownload.getInstance().addNode(node);
-			//
-			int bucketIndex = calculateBucketIndex(node.nodeId().bsId());
-			List<Node> bucket = buckets.get(bucketIndex);
-			if (!bucket.contains(node)) {
-				if (bucket.size() < bucketValueSize) {
-					// log.info(node.nodeId().id() + "添加到" + bucketIndex);
-					bucket.add(node); // 如果桶未满，则添加节点
-				} else {
-					// 桶已满，可能需要实现替换或移除策略
-					handleFullBucket(bucket, node);
-				}
-			}
 
+		//
+		int bucketIndex = calculateBucketIndex(node.nodeId().bsId());
+		ConcurrentSkipListMap<BigInteger, Node> bucket = buckets.get(bucketIndex);
+		bucket.put(node.nodeId().intId(), node);
+		//
+		TryFindPeerAndDownload.getInstance().addNode(node);
+		//
+		if (bucket.size() > bucketValueSize) {
+			bucket.remove(bucket.firstKey());
 		}
 
 	}
 
 	@Override
 	public void removeNode(Node node) {
-		synchronized (lock) {
-			int bucketIndex = calculateBucketIndex(node.nodeId().bsId());
-			buckets.get(bucketIndex).remove(node);
-		}
+
+		int bucketIndex = calculateBucketIndex(node.nodeId().bsId());
+		buckets.get(bucketIndex).remove(node.nodeId().intId());
+
 	}
 
 	@Override
 	public List<Node> getClosestNodes(byte[] targetId, int count) {
 		//
 		int bucketIndex = calculateBucketIndex(targetId);
-		List<Node> closestNodes = new ArrayList<>(buckets.get(bucketIndex));
 
-		if (closestNodes.size() == 0) {
-			return closestNodes;
+		ConcurrentSkipListMap<BigInteger, Node> closestBucket = buckets.get(bucketIndex);
+
+		List<Node> list = new ArrayList<Node>();
+
+		closestBucket.entrySet().iterator().forEachRemaining(e -> {
+			list.add(e.getValue());
+		});
+		if (list.size() == count) {
+			return list;
 		}
 
 		// 在其他桶中寻找节点，直到找到所需数量的节点
 		int left = bucketIndex - 1;
 		int right = bucketIndex + 1;
-		while (closestNodes.size() < count && (left >= 0 || right < buckets.size())) {
+		while (list.size() < count && (left >= 0 || right < buckets.size())) {
 			if (left >= 0) {
-				closestNodes.addAll(buckets.get(left));
+				buckets.get(left).entrySet().iterator().forEachRemaining(e -> {
+					list.add(e.getValue());
+				});
 				left--;
 			}
 			if (right < buckets.size()) {
-				closestNodes.addAll(buckets.get(right));
+				buckets.get(right).entrySet().iterator().forEachRemaining(e -> {
+					list.add(e.getValue());
+				});
 				right++;
 			}
 		}
 
 		// 返回最多 count 个节点
-		return closestNodes.subList(0, Math.min(count, closestNodes.size()));
+		return list.subList(0, Math.min(count, list.size()));
 	}
 
 	// 获取桶的索引，基于XOR距离
@@ -145,57 +126,26 @@ public class DHTRoutingTable implements RoutingTable {
 		return index;
 	}
 
-	// 处理满桶的替换策略 (占位实现)
-	private void handleFullBucket(List<Node> bucket, Node node) {
-		// 在 Kademlia 协议中，可以实现类似替换不可用节点的策略
-		// 这里只是示例，占位处理逻辑
-		bucket.remove(0); // 简单移除最旧的节点
-		bucket.add(node); // 添加新的节点
-	}
-
-	@Override
-	public List<Node> randomNodes(int num) {
-		return getRandomEntries(num);
-	}
-
 	@Override
 	public int targetSize(byte[] target) {
+		if (null == target) {
+			int count = 0;
+			for (ConcurrentSkipListMap<BigInteger, Node> bucket : buckets) {
+				count += bucket.size();
+			}
+			return count;
+		}
 		int index = calculateBucketIndex(target);
 		return buckets.get(index).size();
 	}
 
-	/**
-	 * 水桶抽样算法实现
-	 * 
-	 * @param map
-	 * @param count
-	 */
-	private List<Node> getRandomEntries(int count) {
+	class NodeComParator implements Comparator<BigInteger> {
 
-		List<Node> reservoir = new ArrayList<Node>();
-		//
-		Random random = new Random();
-		int i = 0;
-		for (List<Node> list : buckets) {
-
-			for (Node n : list) {
-				i++;
-				if (reservoir.size() < count) {
-					reservoir.add(n);
-				} else {
-					int j = random.nextInt(i);
-					if (j < count) {
-						reservoir.set(j, n);
-					}
-				}
-			}
+		@Override
+		public int compare(BigInteger o1, BigInteger o2) {
+			return o1.compareTo(o2);
 		}
 
-		//
-		return reservoir;
 	}
 
-	public static void main(String[] args) {
-		System.out.println("FFFFFFFFFFFFFFFFFFFF".length());
-	}
 }

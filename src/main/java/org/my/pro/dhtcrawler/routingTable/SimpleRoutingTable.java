@@ -38,12 +38,10 @@ public class SimpleRoutingTable implements RoutingTable {
 
 	}
 
-	
-	
 	@Override
 	public void resetNodeId(byte[] id) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -83,15 +81,5 @@ public class SimpleRoutingTable implements RoutingTable {
 	public List<Node> getClosestNodes(byte[] targetId, int count) {
 		return getRandomEntries(count);
 	}
-
-	@Override
-	public List<Node> randomNodes(int num) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-
-
-	
 
 }

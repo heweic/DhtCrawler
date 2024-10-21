@@ -64,6 +64,7 @@ public interface LocalDHTNode {
 
 	/**
 	 * 查询hash附近的节点
+	 * 提供给其他节点查询
 	 */
 	public List<Node> findNearest(byte[] hash);
 	/**

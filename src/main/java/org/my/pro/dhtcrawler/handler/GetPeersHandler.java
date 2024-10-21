@@ -47,10 +47,10 @@ public class GetPeersHandler extends RequestMessageHandler {
 
 			byte[] bs = defaultRequest.a().getMap().get(KeyWord.INFO_HASH).getBytes();
 
-			// String hashcode = DHTUtils.byteArrayToHexString(bs);
+			//String hashcode = DHTUtils.byteArrayToHexString(bs);
 
-//			logger.info("{  " + localNode.port() + "  }  " + hashcode + "{ " + message.addr().getAddress().getHostAddress()
-//					+ ":" + message.addr().getPort() + " }");
+		//	logger.info("{  " + localNode.port() + "  }  " + hashcode + "{ "
+		//			+ message.addr().getAddress().getHostAddress() + ":" + message.addr().getPort() + " }");
 
 			if (null != handler) {
 				handler.handler(bs, message);
