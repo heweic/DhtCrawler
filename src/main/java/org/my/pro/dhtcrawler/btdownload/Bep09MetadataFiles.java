@@ -91,46 +91,56 @@ public class Bep09MetadataFiles {
 	 */
 	private volatile AtomicBoolean isHandShack = new AtomicBoolean(true);
 	private CountDownLatch isDownload = new CountDownLatch(1);
-
 	private NioEventLoopGroup group;
 	private Channel clientChannel;
 
+	private static int CONNECT_TIMEOUT_MILLIS = 2000;
+	private static int DOWNLOAD_TIME_OUT = CONNECT_TIMEOUT_MILLIS + 8000;
+	private static int SO_RCVBUF = 1024 * 500;
+
 	private String logMes(String mes) {
-		if(null == mes) {
-			return "连接到" + peerIp + "：" + peerPort + "下载:" + DHTUtils.byteArrayToHexString(hash);
-		}
-		return "连接到" + peerIp + "：" + peerPort + "下载:" + DHTUtils.byteArrayToHexString(hash) + "---" + mes;
+		return "连接到" + peerIp + "：" + peerPort + "下载:" + DHTUtils.byteArrayToHexString(hash) + "---"
+				+ (null == mes ? "" : mes);
 	}
-	
+
 	public boolean get() {
+		//
 		try {
-			isDownload.await(5, TimeUnit.SECONDS);
+			isDownload.await(DOWNLOAD_TIME_OUT, TimeUnit.MILLISECONDS);
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		//
 
+		//
 		boolean isDown = new File(canonicalPath + "/torrent/" + DHTUtils.byteArrayToHexString(hash)).exists();
 		if (!isDown) {
-			if (null != clientChannel) {
-				clientChannel.close();
-			}
-			if (null != group) {
-				group.shutdownGracefully();
-			}
+			close();
 		}
 		return isDown;
 	}
 
-	public void tryDownload(){
+	private void close() {
+		//
+		isDownload.countDown();
+		//
+		if (null != clientChannel) {
+			clientChannel.close();
+		}
+		if (null != group) {
+			group.shutdownGracefully();
+		}
+	}
+
+	public void tryDownload() {
 		// 使用netty发起tcp连接到peer
 		group = new NioEventLoopGroup();
 		try {
 			Bootstrap bootstrap = new Bootstrap();
 
 			bootstrap.group(group).channel(NioSocketChannel.class).option(ChannelOption.SO_KEEPALIVE, true)
-					.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 2000).option(ChannelOption.SO_RCVBUF, 1024 * 500)
-					.handler(new ChannelInitializer<SocketChannel>() {
+					.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, CONNECT_TIMEOUT_MILLIS)
+					.option(ChannelOption.SO_RCVBUF, SO_RCVBUF).handler(new ChannelInitializer<SocketChannel>() {
 
 						@Override
 						protected void initChannel(SocketChannel ch) throws Exception {
@@ -143,12 +153,12 @@ public class Bep09MetadataFiles {
 			ChannelFuture channelFuture = bootstrap.connect(peerIp, peerPort);
 			channelFuture.addListener(future -> {
 				if (future.isSuccess()) {
-					log.info(logMes(null));
-				}else {
-					log.info(logMes("连接失败"));
+					log.info(logMes("连接成功!"));
+				} else {
+					close();
 				}
 			});
-			
+
 			clientChannel = channelFuture.sync().channel();
 			//
 
@@ -174,16 +184,84 @@ public class Bep09MetadataFiles {
 	 */
 	class HandShackerHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
-		
+		private boolean waitNext = false;
+
 		@Override
 		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
 			log.error(logMes(cause.getMessage()));
+			close();
+		}
+
+		private void doHandShack(ByteBuf bf, ChannelHandlerContext ctx) throws Exception {
+
+			// 递归读信息
+			readInfo(bf);
+			// 如果获取到metadata_size
+			if (metadata_size > 0) {
+				isHandShack.set(false);
+				// 握手完成后替换解码器
+				ctx.pipeline().replace(this, "encoder", new LengthFieldBasedFrameDecoder(1024 * 64, 0, 4, 0, 0));
+				// 发送扩展握手协议
+				sendHandshakeMsg(ctx);
+
+				// 请求第一块数据
+				sendMetadataRequest(ctx, 0);
+			} else {
+				throw new Exception("获取metadata_size失败");
+			}
+		}
+
+		private void readInfo(ByteBuf bf) throws Exception {
+
+			if (bf.readableBytes() < 5) {
+				throw new Exception("可读ByteBuf不足");
+			}
+
+			try {
+				BitTorrent bt = new BitTorrent();
+				bt.setLength(bf.readInt());
+				// 仅仅解析BEP09协议中 种子元数据部分
+				bt.setType(bf.readByte());
+				//
+				boolean needJump = true;
+				//
+				if (bt.getType() == 20) {
+					bt.setId(bf.readByte());
+
+					byte[] dictionary = new byte[bt.getLength() - 2];
+					bf.readBytes(dictionary);
+					BEncodedValue bv = BDecoder.decode(new AutoCloseInputStream(new ByteArrayInputStream(dictionary)));
+
+					// 关注ut_metadata及metadata_size
+					ut_metadata = bv.getMap().get("m").getMap().get("ut_metadata").getInt();
+					metadata_size = bv.getMap().get("metadata_size").getInt();
+					blockSize = (int) Math.ceil((double) metadata_size / (16 << 10));
+					//
+					needJump = false;
+				}
+				// 跳过
+				if (needJump) {
+					bf.readBytes(bt.getLength() - 1);
+				}
+				//
+				if (bf.readableBytes() > 0) {
+					readInfo(bf);
+				}
+			} catch (Exception e) {
+				// e.printStackTrace();
+				throw e;
+			}
+
 		}
 
 		@Override
 		public void channelRead0(ChannelHandlerContext ctx, ByteBuf bf) throws Exception {
 
 			if (isHandShack.get()) {
+				if (waitNext) {
+					doHandShack(bf, ctx);
+				}
+
 				if (bf.readableBytes() < 68) {
 					return;
 				}
@@ -196,38 +274,13 @@ public class Bep09MetadataFiles {
 				// @TODO 判断与请求哈希是否一致
 				bf.readBytes(20);// 对方peerID
 
-				BitTorrent bt = new BitTorrent();
-
-				bt.setLength(bf.readInt());
-				// 仅仅解析BEP09协议中 种子元数据部分
-				bt.setType(bf.readByte());
-				
-				if (bt.getType() == 20) {
-					bt.setId(bf.readByte());
-
-					byte[] dictionary = new byte[bt.getLength() - 2];
-					bf.readBytes(dictionary);
-					BEncodedValue bv = BDecoder.decode(new AutoCloseInputStream(new ByteArrayInputStream(dictionary)));
-
-					// 关注ut_metadata及metadata_size
-					ut_metadata = bv.getMap().get("m").getMap().get("ut_metadata").getInt();
-					metadata_size = bv.getMap().get("metadata_size").getInt();
-					blockSize = (int) Math.ceil((double) metadata_size / (16 << 10));
+				if (bf.readableBytes() > 5) {
+					doHandShack(bf, ctx);
 				} else {
-					// 跳过
-					bf.readBytes(bt.getLength() - 1);
+					// 如果未获取到metadata_size,可能会在下一个包中发送
+					waitNext = true;
+					return;
 				}
-				//
-
-				//
-				isHandShack.set(false);
-				// 握手完成后替换解码器
-				ctx.pipeline().replace(this, "encoder", new LengthFieldBasedFrameDecoder(1024 * 64, 0, 4, 0, 0));
-				// 发送扩展握手协议
-				sendHandshakeMsg(ctx);
-
-				// 请求第一块数据
-				sendMetadataRequest(ctx, 0);
 
 			}
 		}
@@ -248,12 +301,12 @@ public class Bep09MetadataFiles {
 	 * netty handler
 	 */
 	class TorrentMetadataHandler extends SimpleChannelInboundHandler<ByteBuf> {
-		
-		
 
 		@Override
 		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+			// cause.printStackTrace();
 			log.error(logMes(cause.getMessage()));
+			close();
 		}
 
 		@Override
@@ -276,8 +329,6 @@ public class Bep09MetadataFiles {
 				bf.readInt();
 				bf.readByte();// messageType
 				bf.readByte();// messageID
-
-				// System.out.println(length + ".....,.,." + bf.readableBytes());
 
 				byte[] data = new byte[bf.readableBytes()];
 				bf.readBytes(data);
@@ -302,10 +353,8 @@ public class Bep09MetadataFiles {
 					fullData.readBytes(fulbs);
 					FileUtils.writeByteArrayToFile(
 							new File(canonicalPath + "/torrent/" + DHTUtils.byteArrayToHexString(hash)), fulbs, true);
-
-					isDownload.countDown();
-
-					ctx.close();
+					//
+					close();
 				}
 			}
 
@@ -404,23 +453,4 @@ public class Bep09MetadataFiles {
 
 	}
 
-	public static void main(String[] args) {
-		// 开始尝试下载:14.19.153.191:22223-6972a67a6990b5adb03b8351ddf02ecf4f3458dc
-		// 2024-10-14 18:01:56,202
-		// [org.my.pro.dhtcrawler.btdownload.Bep09MetadataFiles]-[INFO]
-		// 连接到14.19.153.191：22223下载:[B@4980efac
-		String ip = "113.100.209.17"; // 目标IP
-		int port = 8085; // 目标端口
-		byte[] infoHash = DHTUtils.hexStringToByteArray("6e1b73f9eaec44f5a9ca2701aafae8d7256bc5bc");
-		Bep09MetadataFiles bep09MetadataFiles = new Bep09MetadataFiles(infoHash, DHTUtils.generatePeerId(), ip, port);
-
-		try {
-			bep09MetadataFiles.tryDownload();
-		} catch (Exception e) {
-			e.printStackTrace();
-			// TODO: handle exception
-		}
-		System.out.println(bep09MetadataFiles.get());
-
-	}
 }

@@ -12,7 +12,7 @@
 
 	<groupId>org.my.pro</groupId>
 	<artifactId>dhtCrawler</artifactId>
-	<version>2.1</version>
+	<version>2.2</version>
 	<packaging>jar</packaging>
 
 	<name>dhtCrawler</name>

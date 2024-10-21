@@ -12,7 +12,8 @@ import org.my.pro.dhtcrawler.message.MessageFactory;
 import org.my.pro.dhtcrawler.util.DHTUtils;
 
 /**
- * 不断的发送find_node 认识更多的节点 如果当前节点，长时间未获得哈希，修改当前节点ID
+ * @author hew
+ * 爬虫核心逻辑;不断的发送find_node 认识更多的节点 如果当前节点，长时间未获得哈希，修改当前节点ID
  */
 public class DHTCrawler implements DHTTask {
 

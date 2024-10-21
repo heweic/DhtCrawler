@@ -11,7 +11,7 @@ import be.adaxisoft.bencode.BDecoder;
 import be.adaxisoft.bencode.BEncodedValue;
 import be.adaxisoft.bencode.BEncoder;
 
-public class Test {
+public class TestReadFile {
 
 	public static void main(String[] args) {
 		try {

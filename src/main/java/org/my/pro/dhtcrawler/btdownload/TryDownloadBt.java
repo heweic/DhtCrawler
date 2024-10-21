@@ -9,7 +9,6 @@ import org.apache.commons.io.input.AutoCloseInputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.my.pro.dhtcrawler.Node;
-import org.my.pro.dhtcrawler.routingTable.DefaultNodeInfo;
 import org.my.pro.dhtcrawler.util.BenCodeUtils;
 import org.my.pro.dhtcrawler.util.DHTUtils;
 
@@ -50,7 +49,7 @@ public class TryDownloadBt {
 
 	private byte[] localId;
 
-	private static Log log = LogFactory.getLog(TryDownloadBt.class);
+	public static Log log = LogFactory.getLog(TryDownloadBt.class);
 
 	public TryDownloadBt(byte[] infoHash, Node peer, byte[] localId) {
 		super();
@@ -193,8 +192,8 @@ public class TryDownloadBt {
 					// nowBlockSize = blockLeftSize;
 
 					System.out.println("blockLeftSize" + blockLeftSize);
-					byte pid = bf.readByte();
-					byte dataType = bf.readByte();
+					bf.readByte();
+					bf.readByte();
 
 					blockLeftSize = blockLeftSize - 2;
 
@@ -334,24 +333,4 @@ public class TryDownloadBt {
 
 	}
 
-	public static void main(String[] args) throws InterruptedException {
-		String ip = "176.9.137.195"; // 目标IP
-		int port = 37040; // 目标端口
-		byte[] infoHash = DHTUtils.hexStringToByteArray("fe398bcb9f127804ba9afcbee934303496487428");
-
-		// 假设已经填充infoHash
-		// Arrays.fill(infoHash, (byte) 1);
-
-		TryDownloadBt client;
-		try {
-			Node info = new DefaultNodeInfo(null, ip, port);
-			client = new TryDownloadBt(infoHash, info,
-					DHTUtils.hexStringToByteArray("2d4e455454593030312d8fd20652dd2588277467"));
-			client.downloadTorrentFile();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-	}
 }

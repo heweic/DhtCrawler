@@ -7,10 +7,8 @@ import org.my.pro.dhtcrawler.LocalDHTNode;
 import org.my.pro.dhtcrawler.netty.DefaultDhtNode;
 import org.my.pro.dhtcrawler.util.DHTUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -23,6 +21,7 @@ public class Config implements ApplicationListener<ApplicationEvent> {
 
 	@Autowired
 	private DHTConfig dhtConfig;
+
 	@Override
 	public void onApplicationEvent(ApplicationEvent event) {
 		// 防止重复执行
@@ -32,7 +31,6 @@ public class Config implements ApplicationListener<ApplicationEvent> {
 			}
 			isRun = true;
 		}
-
 
 		int tmp = dhtConfig.getPort();
 

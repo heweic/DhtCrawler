@@ -108,11 +108,11 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 	private static long TIME_OUT = 1000 * 60 * 1;
 
-	private void writeHashToFile(byte[] hash) {
+	private void writeHashToFile(byte[] hash, String code) {
 		try {
 
 			String line = DHTUtils.byteArrayToHexString(id()) + ":" + port() + ":" + DHTUtils.byteArrayToHexString(hash)
-					+ ":" + FastDateFormat.getInstance("yyyy/MM/dd HH:mm:ss").format(new Date()) + NEW_LINE;
+					+ ":" + FastDateFormat.getInstance("yyyy/MM/dd HH:mm:ss").format(new Date()) + code + NEW_LINE;
 			FileUtils.writeStringToFile(file, line, true);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -127,7 +127,6 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 	@Override
 	public void resetId(byte[] id) {
-		log.info(DHTUtils.byteArrayToHexString(this.id) + "更换ID到:" + DHTUtils.byteArrayToHexString(id));
 		this.id = id;
 		//
 		routingTable.resetNodeId(id);
@@ -220,7 +219,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 			public void handler(byte[] hash, KrpcMessage message) {
 				//
 				hashTime = System.currentTimeMillis();
-				writeHashToFile(hash);
+				writeHashToFile(hash, KeyWord.GET_PEERS);
 				//
 				downloadTorrent.subTask(hash);
 			}
@@ -231,7 +230,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 			public void handler(byte[] hash, KrpcMessage message) {
 				//
 				hashTime = System.currentTimeMillis();
-				writeHashToFile(hash);
+				writeHashToFile(hash, KeyWord.ANNOUNCE_PEER);
 				//
 				DefaultRequest defaultRequest = (DefaultRequest) message;
 				try {
