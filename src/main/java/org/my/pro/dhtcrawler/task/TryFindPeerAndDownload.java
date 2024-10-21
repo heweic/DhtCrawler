@@ -229,7 +229,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 				log.info("开始尝试下载:" + DHTUtils.byteArrayToHexString(targetHash) + "node节点数:" + nodes.size());
 
 				for (Node n : nodes) {
-					getPerrs(n.ip(), n.port(), targetHash);
+					getPerrs(n.ip(), n.port(), targetHash , 0);
 				}
 
 			} catch (Exception e) {
@@ -240,7 +240,12 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 
 		}
 
-		public void getPerrs(String ip, int port, byte[] hash) {
+		public void getPerrs(String ip, int port, byte[] hash , int findCount) {
+			
+			//
+			if(findCount > 12) {
+				return;
+			}
 			// 给随机一个nodeId
 			KrpcMessage get_peers = MessageFactory.createGet_peers(ip, port, DHTUtils.generateNodeId(), hash);
 			// 可能返回nodeList或peerList
@@ -264,7 +269,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 					// 添加新节点
 					for (int i = 0; i < num; i++) {
 						Node info = DHTUtils.readNodeInfo(byteBuf);
-						getPerrs(info.ip(), info.port(), hash);
+						getPerrs(info.ip(), info.port(), hash , findCount ++);
 
 					}
 
