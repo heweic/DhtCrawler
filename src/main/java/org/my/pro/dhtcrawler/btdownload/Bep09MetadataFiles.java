@@ -188,7 +188,7 @@ public class Bep09MetadataFiles {
 
 		@Override
 		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-			log.error(logMes(cause.getMessage()));
+//			log.error(logMes(cause.getMessage()));
 			close();
 		}
 
@@ -213,13 +213,19 @@ public class Bep09MetadataFiles {
 
 		private void readInfo(ByteBuf bf) throws Exception {
 
-			if (bf.readableBytes() < 5) {
+			if (bf.readableBytes() < 4) {
 				throw new Exception("可读ByteBuf不足");
 			}
 
 			try {
 				BitTorrent bt = new BitTorrent();
+				bf.markReaderIndex();
 				bt.setLength(bf.readInt());
+				if(bt.getLength() < bf.readableBytes()) {
+					//
+					bf.resetReaderIndex();
+					return;
+				}
 				// 仅仅解析BEP09协议中 种子元数据部分
 				bt.setType(bf.readByte());
 				//
@@ -248,7 +254,7 @@ public class Bep09MetadataFiles {
 					readInfo(bf);
 				}
 			} catch (Exception e) {
-				// e.printStackTrace();
+//				 e.printStackTrace();
 				throw e;
 			}
 
@@ -304,7 +310,7 @@ public class Bep09MetadataFiles {
 
 		@Override
 		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-			// cause.printStackTrace();
+		//	cause.printStackTrace();
 			log.error(logMes(cause.getMessage()));
 			close();
 		}
@@ -353,6 +359,8 @@ public class Bep09MetadataFiles {
 					fullData.readBytes(fulbs);
 					FileUtils.writeByteArrayToFile(
 							new File(canonicalPath + "/torrent/" + DHTUtils.byteArrayToHexString(hash)), fulbs, true);
+					//
+					logMes("下載完成!");
 					//
 					close();
 				}

@@ -5,10 +5,11 @@ import org.my.pro.dhtcrawler.util.DHTUtils;
 public class TestBep09 {
 
 	public static void main(String[] args) {
-		//   连接到62.171.169.198：6666下载:62f550165041e583de99844a3c4c5b6a19b481d3-
-		String ip = "62.171.169.198"; // 目标IP
-		int port = 6666; // 目标端口
-		byte[] infoHash = DHTUtils.hexStringToByteArray("62f550165041e583de99844a3c4c5b6a19b481d3");
+		//   连接到94.180.57.185：51221下载:8cf40dc8eac30e39ae781a109b641ab0b7fa54bc
+		
+		String ip = "94.180.57.185"; // 目标IP
+		int port = 51221; // 目标端口
+		byte[] infoHash = DHTUtils.hexStringToByteArray("8cf40dc8eac30e39ae781a109b641ab0b7fa54bc");
 		Bep09MetadataFiles bep09MetadataFiles = new Bep09MetadataFiles(infoHash, DHTUtils.generatePeerId(), ip, port);
 
 		try {
