@@ -169,7 +169,6 @@ public class Bep09MetadataFiles {
 
 			channelFuture.channel().closeFuture().await();
 		} catch (Exception e) {
-			e.printStackTrace();
 			isDownload.countDown();
 		} finally {
 			group.shutdownGracefully();
@@ -193,7 +192,6 @@ public class Bep09MetadataFiles {
 
 		@Override
 		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-			cause.printStackTrace();
 			close();
 		}
 
@@ -318,8 +316,6 @@ public class Bep09MetadataFiles {
 
 		@Override
 		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-			 cause.printStackTrace();
-//			log.error(logMes(cause.getMessage()));
 			close();
 		}
 

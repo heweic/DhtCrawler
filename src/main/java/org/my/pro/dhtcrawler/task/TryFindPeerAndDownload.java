@@ -41,8 +41,10 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 
 	private volatile boolean state = false;
 
+	// 防止重复提交哈希执行find_peers
 	private ConcurrentHashMap<byte[], Object> findPeersHash;
-	private ConcurrentHashMap<byte[], Object> downloadTorrentHash;
+	// 防止重复提交IP加端口重复执行
+	private ConcurrentHashMap<String, Object> downloadTorrentIPHash;
 	private Object empty = new Object();
 
 	private HashSet<LocalDHTNode> localDHTNodes = new HashSet<LocalDHTNode>();
@@ -98,22 +100,22 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 	 * @param port
 	 * @param hash
 	 */
-	public void subTask(String ip, int port, byte[] hash , boolean needWaite) {
+	public void subTask(String ip, int port, byte[] hash, boolean needWaite) {
 		if (!state) {
 			return;
 		}
-		//正在下载的任务防止重复提交
-		if(downloadTorrentHash.containsKey(hash)) {
+		// 正在下载的任务防止重复提交
+		if (downloadTorrentIPHash.containsKey(ip + port)) {
 			return;
 		}
 		//
 		downloadTorrentExe.execute(new Runnable() {
 			@Override
 			public void run() {
-				//针对ANNOUNCE_PEER提交的任务，等待一分钟后再尝试下载
-				if(needWaite) {
+				// 针对ANNOUNCE_PEER提交的任务，等待10秒后再尝试下载
+				if (needWaite) {
 					try {
-						Thread.sleep(60 * 1000);
+						Thread.sleep(10 * 1000);
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -125,11 +127,11 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 				bep09MetadataFiles.tryDownload();
 				bep09MetadataFiles.get();
 				//
-				downloadTorrentHash.remove(hash);
+				downloadTorrentIPHash.remove(ip + port);
 			}
 		});
 		//
-		downloadTorrentHash.put(hash, empty);
+		downloadTorrentIPHash.put(ip + port, empty);
 	}
 
 	@Override
@@ -235,10 +237,11 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 			findPeersHash.put(targetHash, empty);
 			try {
 
-				log.info("开始尝试下载:" + DHTUtils.byteArrayToHexString(targetHash) + "node节点数:" + nodes.size());
+				// log.info("开始尝试下载:" + DHTUtils.byteArrayToHexString(targetHash) + "node节点数:" +
+				// nodes.size());
 
 				for (Node n : nodes) {
-					getPerrs(n.ip(), n.port(), targetHash , 0);
+					getPerrs(n.ip(), n.port(), targetHash, 0);
 				}
 
 			} catch (Exception e) {
@@ -249,10 +252,10 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 
 		}
 
-		public void getPerrs(String ip, int port, byte[] hash , int findCount) {
-			
+		public void getPerrs(String ip, int port, byte[] hash, int findCount) {
+
 			//
-			if(findCount > 12) {
+			if (findCount > 16) {
 				return;
 			}
 			// 给随机一个nodeId
@@ -278,7 +281,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 					// 添加新节点
 					for (int i = 0; i < num; i++) {
 						Node info = DHTUtils.readNodeInfo(byteBuf);
-						getPerrs(info.ip(), info.port(), hash , findCount ++);
+						getPerrs(info.ip(), info.port(), hash, findCount);
 
 					}
 
@@ -291,7 +294,8 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 						for (BEncodedValue bv : list) {
 							ByteBuf byteBuf = Unpooled.wrappedBuffer(bv.getBytes());
 							Node peer = readIpPort(byteBuf);
-							subTask(peer.ip(), peer.port(), hash ,false);
+							findCount += 1;
+							subTask(peer.ip(), peer.port(), hash, false);
 						}
 
 					} catch (Exception e) {
@@ -325,7 +329,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		tryFindPeerExe = Executors.newFixedThreadPool(64);
 		downloadTorrentExe = Executors.newCachedThreadPool();
 		findPeersHash = new ConcurrentHashMap<byte[], Object>();
-		downloadTorrentHash = new ConcurrentHashMap<byte[], Object>();
+		downloadTorrentIPHash = new ConcurrentHashMap<String, Object>();
 		allNodes = new ConcurrentSkipListMap<BigInteger, Node>(new NodeComParator());
 		log.info("Bt下载模块启动");
 	}
@@ -341,7 +345,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		downloadTorrentExe.shutdown();
 		findPeersHash.clear();
 		allNodes.clear();
-		downloadTorrentHash.clear();
+		downloadTorrentIPHash.clear();
 		log.info("Bt下载模块关闭");
 	}
 
