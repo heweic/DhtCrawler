@@ -112,7 +112,8 @@ public class DefaultDhtNode extends AbstractDhtNode {
 		try {
 
 			String line = DHTUtils.byteArrayToHexString(id()) + ":" + port() + ":" + DHTUtils.byteArrayToHexString(hash)
-					+ ":" + FastDateFormat.getInstance("yyyy/MM/dd HH:mm:ss").format(new Date()) + ":" + code + NEW_LINE;
+					+ ":" + FastDateFormat.getInstance("yyyy/MM/dd HH:mm:ss").format(new Date()) + ":" + code
+					+ NEW_LINE;
 			FileUtils.writeStringToFile(file, line, true);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -169,7 +170,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 	@Override
 	public void tryDownLoad(byte[] hash) {
-		this.downloadTorrent.subTask(hash);
+		this.downloadTorrent.subTask_announce_peer(hash);
 	}
 
 	@Override
@@ -220,8 +221,8 @@ public class DefaultDhtNode extends AbstractDhtNode {
 				//
 				hashTime = System.currentTimeMillis();
 				writeHashToFile(hash, KeyWord.GET_PEERS);
-				//
-				downloadTorrent.subTask(hash);
+				// get_peers获得的哈希数较多,能成功下载的概率并不大,概率减少任务提交，腾出位置给announce_peer
+				downloadTorrent.subTask_findpeers(hash);
 			}
 		}));
 		map.put(KeyWord.ANNOUNCE_PEER, new AnnouncePeerHandler(this, new WorkHandler() {
@@ -234,8 +235,11 @@ public class DefaultDhtNode extends AbstractDhtNode {
 				//
 				DefaultRequest defaultRequest = (DefaultRequest) message;
 				try {
+					// 直接提交下载任务
 					downloadTorrent.subTask(message.addr().getAddress().getHostAddress(),
-							defaultRequest.a().getMap().get("port").getInt(), hash , true);
+							defaultRequest.a().getMap().get("port").getInt(), hash, true);
+					// 重新查找perrs再下载
+					downloadTorrent.subTask_announce_peer(hash);
 				} catch (InvalidBEncodingException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();

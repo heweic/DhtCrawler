@@ -35,7 +35,9 @@ import io.netty.buffer.Unpooled;
  */
 public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 
-	private ExecutorService tryFindPeerExe;
+	private ExecutorService tryFindPeerExe_findpeers;
+	private ExecutorService tryFindPeerExe_announce_peer;
+	
 	private ExecutorService downloadTorrentExe;
 	private static Log log = LogFactory.getLog(TryFindPeerAndDownload.class);
 
@@ -78,10 +80,10 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 
 	/**
 	 * 只有哈希
-	 * 
+	 * findPerrs提交
 	 * @param hash
 	 */
-	public void subTask(byte[] hash) {
+	public void subTask_findpeers(byte[] hash) {
 		if (!state) {
 			return;
 		}
@@ -90,7 +92,22 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 			return;
 		}
 		//
-		tryFindPeerExe.execute(new RunTask(hash));
+		tryFindPeerExe_findpeers.execute(new RunTask(hash));
+	}
+	/**
+	 * announce_peer提交
+	 * @param hash
+	 */
+	public void subTask_announce_peer(byte[] hash) {
+		if (!state) {
+			return;
+		}
+		// 如果提交哈希正在执行查找peers,防止连续提交
+		if (findPeersHash.containsKey(hash)) {
+			return;
+		}
+		//
+		tryFindPeerExe_announce_peer.execute(new RunTask(hash));
 	}
 
 	/**
@@ -326,7 +343,8 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		}
 		state = true;
 
-		tryFindPeerExe = Executors.newFixedThreadPool(64);
+		tryFindPeerExe_findpeers = Executors.newFixedThreadPool(64);
+		tryFindPeerExe_announce_peer = Executors.newCachedThreadPool();
 		downloadTorrentExe = Executors.newCachedThreadPool();
 		findPeersHash = new ConcurrentHashMap<byte[], Object>();
 		downloadTorrentIPHash = new ConcurrentHashMap<String, Object>();
@@ -341,7 +359,8 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		}
 		state = false;
 
-		tryFindPeerExe.shutdown();
+		tryFindPeerExe_findpeers.shutdown();
+		tryFindPeerExe_announce_peer.shutdown();
 		downloadTorrentExe.shutdown();
 		findPeersHash.clear();
 		allNodes.clear();
