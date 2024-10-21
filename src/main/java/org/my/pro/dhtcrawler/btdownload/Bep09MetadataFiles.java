@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -133,11 +134,11 @@ public class Bep09MetadataFiles {
 	}
 
 	public void tryDownload() {
-		//如果文件已下载，不执行
-		if(new File(canonicalPath + "/torrent/" + DHTUtils.byteArrayToHexString(hash)).exists()) {
+		// 如果文件已下载，不执行
+		if (new File(canonicalPath + "/torrent/" + DHTUtils.byteArrayToHexString(hash)).exists()) {
 			return;
 		}
-		
+
 		// 使用netty发起tcp连接到peer
 		group = new NioEventLoopGroup();
 		try {
@@ -257,7 +258,7 @@ public class Bep09MetadataFiles {
 					readInfo(bf);
 				}
 			} catch (Exception e) {
-				 e.printStackTrace();
+				e.printStackTrace();
 				throw e;
 			}
 
@@ -287,8 +288,7 @@ public class Bep09MetadataFiles {
 					doHandShack(bf, ctx);
 				} else {
 					isHandShack.set(false);
-					
-					
+
 					// 如果未获取到metadata_size,可能会在下一个包中发送
 					waitNext = true;
 					return;
@@ -361,17 +361,30 @@ public class Bep09MetadataFiles {
 					// 下载完成
 					byte[] fulbs = new byte[fullData.readableBytes()];
 					fullData.readBytes(fulbs);
-					FileUtils.writeByteArrayToFile(
-							new File(canonicalPath + "/torrent/" + DHTUtils.byteArrayToHexString(hash)), fulbs, true);
+
+					synWriteBytesToFile(DHTUtils.byteArrayToHexString(hash), fulbs);
 					//
 					logMes("下載完成!");
 					//
 					close();
 				}
 			}
-
 		}
+	}
 
+	private static final ConcurrentHashMap<String, Object> lockMap = new ConcurrentHashMap<String, Object>();
+
+	private void synWriteBytesToFile(String hash, byte[] bs) {
+		Object lock = lockMap.computeIfAbsent(hash, key -> new Object());
+		synchronized (lock) {
+			try {
+				FileUtils.writeByteArrayToFile(new File(canonicalPath + "/torrent/" + hash), bs, true);
+			} catch (Exception e) {
+
+			} finally {
+				lockMap.remove(hash);
+			}
+		}
 	}
 
 	private void sendMetadataRequest(ChannelHandlerContext ctx, int piece) throws Exception {

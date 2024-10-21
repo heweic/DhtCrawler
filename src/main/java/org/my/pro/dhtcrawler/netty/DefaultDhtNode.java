@@ -221,7 +221,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 				//
 				hashTime = System.currentTimeMillis();
 				writeHashToFile(hash, KeyWord.GET_PEERS);
-				// get_peers获得的哈希数较多,能成功下载的概率并不大,概率减少任务提交，腾出位置给announce_peer
+				// get_peers获得的哈希数较多,能成功下载的概率并不大,可概率减少任务提交，腾出位置给announce_peer
 				downloadTorrent.subTask_findpeers(hash);
 			}
 		}));
