@@ -133,6 +133,11 @@ public class Bep09MetadataFiles {
 	}
 
 	public void tryDownload() {
+		//如果文件已下载，不执行
+		if(new File(canonicalPath + "/torrent/" + DHTUtils.byteArrayToHexString(hash)).exists()) {
+			return;
+		}
+		
 		// 使用netty发起tcp连接到peer
 		group = new NioEventLoopGroup();
 		try {
