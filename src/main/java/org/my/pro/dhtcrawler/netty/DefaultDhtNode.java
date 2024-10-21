@@ -235,7 +235,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 				DefaultRequest defaultRequest = (DefaultRequest) message;
 				try {
 					downloadTorrent.subTask(message.addr().getAddress().getHostAddress(),
-							defaultRequest.a().getMap().get("port").getInt(), hash);
+							defaultRequest.a().getMap().get("port").getInt(), hash , true);
 				} catch (InvalidBEncodingException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();

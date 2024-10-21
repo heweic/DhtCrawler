@@ -98,7 +98,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 	 * @param port
 	 * @param hash
 	 */
-	public void subTask(String ip, int port, byte[] hash) {
+	public void subTask(String ip, int port, byte[] hash , boolean needWaite) {
 		if (!state) {
 			return;
 		}
@@ -110,6 +110,15 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		downloadTorrentExe.execute(new Runnable() {
 			@Override
 			public void run() {
+				//针对ANNOUNCE_PEER提交的任务，等待一分钟后再尝试下载
+				if(needWaite) {
+					try {
+						Thread.sleep(60 * 1000);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
 				// 给随机一个本地peer ID
 				Bep09MetadataFiles bep09MetadataFiles = new Bep09MetadataFiles(hash, DHTUtils.generatePeerId(), ip,
 						port);
@@ -282,7 +291,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 						for (BEncodedValue bv : list) {
 							ByteBuf byteBuf = Unpooled.wrappedBuffer(bv.getBytes());
 							Node peer = readIpPort(byteBuf);
-							subTask(peer.ip(), peer.port(), hash);
+							subTask(peer.ip(), peer.port(), hash ,false);
 						}
 
 					} catch (Exception e) {
