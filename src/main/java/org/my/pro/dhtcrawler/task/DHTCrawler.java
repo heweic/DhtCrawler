@@ -24,8 +24,6 @@ public class DHTCrawler implements DHTTask {
 
 	private volatile boolean state = false;
 
-	private long changeTime = System.currentTimeMillis();
-
 	public DHTCrawler(LocalDHTNode dhtNode) {
 		super();
 		this.dhtNode = dhtNode;
@@ -39,13 +37,6 @@ public class DHTCrawler implements DHTTask {
 					// 如果时间段内未获得哈希更换ID
 					if (!dhtNode.hasGetHash()) {
 						dhtNode.resetId(DHTUtils.generateNodeId());
-						changeTime = System.currentTimeMillis();
-					} else {
-						// 如果长时间持有一个ID，更换ID
-						if (System.currentTimeMillis() - changeTime >= 1000 * 60 * 2) {
-							dhtNode.resetId(DHTUtils.generateNodeId());
-							changeTime = System.currentTimeMillis();
-						}
 					}
 
 					// 根据自身ID，查询自己距离较近的节点并建立联系
