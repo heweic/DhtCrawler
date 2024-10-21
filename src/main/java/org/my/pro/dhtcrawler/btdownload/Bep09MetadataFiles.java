@@ -164,6 +164,7 @@ public class Bep09MetadataFiles {
 
 			channelFuture.channel().closeFuture().await();
 		} catch (Exception e) {
+			e.printStackTrace();
 			isDownload.countDown();
 		} finally {
 			group.shutdownGracefully();
@@ -187,7 +188,7 @@ public class Bep09MetadataFiles {
 
 		@Override
 		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-//			log.error(logMes(cause.getMessage()));
+			cause.printStackTrace();
 			close();
 		}
 
@@ -220,7 +221,7 @@ public class Bep09MetadataFiles {
 				BitTorrent bt = new BitTorrent();
 				bf.markReaderIndex();
 				bt.setLength(bf.readInt());
-				if (bt.getLength() < bf.readableBytes()) {
+				if (bt.getLength() > bf.readableBytes()) {
 					//
 					bf.resetReaderIndex();
 					return;
@@ -253,7 +254,7 @@ public class Bep09MetadataFiles {
 					readInfo(bf);
 				}
 			} catch (Exception e) {
-//				 e.printStackTrace();
+				 e.printStackTrace();
 				throw e;
 			}
 
@@ -282,6 +283,9 @@ public class Bep09MetadataFiles {
 				if (bf.readableBytes() > 5) {
 					doHandShack(bf, ctx);
 				} else {
+					isHandShack.set(false);
+					
+					
 					// 如果未获取到metadata_size,可能会在下一个包中发送
 					waitNext = true;
 					return;
@@ -309,7 +313,7 @@ public class Bep09MetadataFiles {
 
 		@Override
 		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-			// cause.printStackTrace();
+			 cause.printStackTrace();
 //			log.error(logMes(cause.getMessage()));
 			close();
 		}
