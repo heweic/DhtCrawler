@@ -86,7 +86,6 @@ public class DefaultDhtNode extends AbstractDhtNode {
 		this.port = port;
 		if (runBep09) {
 			this.downloadTorrent = TryFindPeerAndDownload.getInstance();
-			this.downloadTorrent.register(this);
 		}
 		this.cleanTimeOutFuture = new CleanTimeOutFuture(this);
 		this.dhtCrawler = new DHTCrawler(this);

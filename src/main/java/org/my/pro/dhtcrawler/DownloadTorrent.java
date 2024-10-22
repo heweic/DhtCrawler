@@ -12,10 +12,6 @@ public interface DownloadTorrent {
 	 */
 	public void addNode(Node node);
 	
-	/**
-	 * 注册本地节点
-	 * @param localDHTNode
-	 */
-	public void register(LocalDHTNode localDHTNode);
+	
 
 }

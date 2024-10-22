@@ -174,7 +174,7 @@ public class DHTCrawler implements DHTTask {
 
 	class workTask implements Runnable {
 
-		private ExecutorService executorService = Executors.newFixedThreadPool(32);
+		private ExecutorService executorService = Executors.newFixedThreadPool(6);
 
 		@Override
 		public void run() {
@@ -227,7 +227,7 @@ public class DHTCrawler implements DHTTask {
 	
 						//	log.info(DHTUtils.byteArrayToHexString(targetNode) + "发现node数量:" + rs.size() + "遍历节点:"
 						// + findNodesIpPort.size());
-							Thread.sleep(50);
+							Thread.sleep(500);
 							
 						}
 					} catch (InterruptedException e) {

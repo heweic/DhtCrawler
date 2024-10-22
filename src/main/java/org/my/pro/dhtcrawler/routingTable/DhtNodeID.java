@@ -7,7 +7,6 @@ import org.my.pro.dhtcrawler.util.DHTUtils;
 
 public class DhtNodeID implements NodeId {
 
-	private BigInteger value;
 	private byte[] bs;
 
 	public DhtNodeID(byte[] bs) {
@@ -17,13 +16,11 @@ public class DhtNodeID implements NodeId {
 		if (bs.length != 20) {
 			throw new RuntimeException();
 		}
-
-		value = new BigInteger(bs);
 	}
 
 	@Override
 	public BigInteger intId() {
-		return value;
+		return new BigInteger(bs);
 	}
 
 	@Override
