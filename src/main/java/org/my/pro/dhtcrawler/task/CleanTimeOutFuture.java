@@ -25,13 +25,17 @@ public class CleanTimeOutFuture implements DHTTask {
 			public void run() {
 				while (!Thread.currentThread().isInterrupted()) {
 					try {
-						Thread.sleep(1000);
+						Thread.sleep(500);
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 					//
-					localDHTNode.clearTimeOutFutrue();
+					try {
+						localDHTNode.clearTimeOutFutrue();
+					}catch (Exception e) {
+						// TODO: handle exception
+					}
 
 				}
 			}

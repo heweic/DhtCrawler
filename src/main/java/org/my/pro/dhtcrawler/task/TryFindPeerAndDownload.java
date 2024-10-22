@@ -51,10 +51,10 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 	private volatile boolean state = false;
 
 	// 防止重复提交哈希执行find_peers
-	private ConcurrentHashMap<byte[], Object> findPeersHash;
+	private static ConcurrentHashMap<String, Object> findPeersHash;
 	// 防止重复提交IP加端口重复执行
-	private ConcurrentHashMap<String, Object> downloadTorrentIPHash;
-	private Object empty = new Object();
+	private static ConcurrentHashMap<String, Object> downloadTorrentIPHash;
+	private static Object empty = new Object();
 
 	private HashSet<LocalDHTNode> localDHTNodes = new HashSet<LocalDHTNode>();
 
@@ -95,7 +95,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 			return;
 		}
 		// 如果提交哈希正在执行下载,防止连续提交
-		if (findPeersHash.containsKey(hash)) {
+		if (findPeersHash.containsKey(DHTUtils.byteArrayToHexString(hash))) {
 			return;
 		}
 		//队列任务太多咱就不提交了
@@ -116,7 +116,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 			return;
 		}
 		// 如果提交哈希正在执行查找peers,防止连续提交
-		if (findPeersHash.containsKey(hash)) {
+		if (findPeersHash.containsKey(DHTUtils.byteArrayToHexString(hash))) {
 			return;
 		}
 		//
@@ -144,12 +144,16 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 			public void run() {
 				
 				// 
-				Bep09MetadataFiles bep09MetadataFiles = new Bep09MetadataFiles(hash, DHTUtils.generatePeerId(), ip,
-						port);
-				bep09MetadataFiles.tryDownload();
-				bep09MetadataFiles.get();
+				try {
+					Bep09MetadataFiles bep09MetadataFiles = new Bep09MetadataFiles(hash, DHTUtils.generatePeerId(), ip,
+							port);
+					bep09MetadataFiles.tryDownload();
+					bep09MetadataFiles.get();
+				}finally {
+					downloadTorrentIPHash.remove(ip + port);
+				}
 				//
-				downloadTorrentIPHash.remove(ip + port);
+				
 			}
 		});
 		//
@@ -239,7 +243,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 			//
 			List<Node> nodes = findNearest(torrentHash);
 
-			findPeersHash.put(torrentHash, empty);
+			findPeersHash.put(DHTUtils.byteArrayToHexString(torrentHash), empty);
 			try {
 
 				HashSet<String> findNodeIpPort = new HashSet<String>();
@@ -285,7 +289,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 				log.error(e.getMessage());
 			}
 			//
-			findPeersHash.remove(torrentHash);
+			findPeersHash.remove(DHTUtils.byteArrayToHexString(torrentHash));
 
 		}
 
@@ -364,7 +368,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		
 		tryFindPeerExe_announce_peer = Executors.newCachedThreadPool();
 		downloadTorrentExe = Executors.newCachedThreadPool();
-		findPeersHash = new ConcurrentHashMap<byte[], Object>();
+		findPeersHash = new ConcurrentHashMap<String, Object>();
 		downloadTorrentIPHash = new ConcurrentHashMap<String, Object>();
 		allNodes = new ConcurrentSkipListMap<BigInteger, Node>(new NodeComParator());
 		log.info("Bt下载模块启动");

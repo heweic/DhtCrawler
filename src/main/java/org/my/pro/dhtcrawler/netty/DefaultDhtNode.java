@@ -2,9 +2,8 @@ package org.my.pro.dhtcrawler.netty;
 
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map.Entry;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
@@ -171,15 +170,16 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 	@Override
 	public void clearTimeOutFutrue() {
-		Iterator<Entry<String, Future>> it = futures.entrySet().iterator();
-		long nowTime = System.currentTimeMillis();
-		while (it.hasNext()) {
-			Entry<String, Future> en = it.next();
-			KrpcMessageFuture future = (KrpcMessageFuture) en.getValue();
-			if (future.getCreateTime() + KrpcMessageFuture.LIVE_TIME >= nowTime) {
-				it.remove();
+
+		long currentTime = System.currentTimeMillis();
+
+		for (Map.Entry<String, Future> entry : futures.entrySet()) {
+			KrpcMessageFuture future = (KrpcMessageFuture) entry.getValue();
+			if (future.getCreateTime() + KrpcMessageFuture.LIVE_TIME < currentTime) {
+				futures.remove(entry.getKey());
 			}
 		}
+
 	}
 
 	private CountDownLatch initNettyCountDownLatch = new CountDownLatch(1);
