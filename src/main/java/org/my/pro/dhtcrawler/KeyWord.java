@@ -39,12 +39,18 @@ public interface KeyWord {
 	public static final String PING = "ping";
 
 	/**
-	 * Findnode被用来查找给定ID的node的联系信息
+	 * Findnode被用来查找给定ID的node的列表
 	 */
 	public static final String FIND_NODE = "find_node";
 
+	/**
+	 * 用与查询持有文件哈希的peer列表
+	 */
 	public static final String GET_PEERS = "get_peers";
 
+	/** 
+	 * 当一个节点想分享某个torrent文件时他会通过这个命令发送至DHT网络
+	 */
 	public static final String ANNOUNCE_PEER = "announce_peer";
 
 	public static final String TARGET = "target";

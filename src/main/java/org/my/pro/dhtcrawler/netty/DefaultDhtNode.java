@@ -1,7 +1,5 @@
 package org.my.pro.dhtcrawler.netty;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -10,7 +8,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,6 +32,7 @@ import org.my.pro.dhtcrawler.routingTable.DHTRoutingTable;
 import org.my.pro.dhtcrawler.task.CleanTimeOutFuture;
 import org.my.pro.dhtcrawler.task.DHTCrawler;
 import org.my.pro.dhtcrawler.task.TryFindPeerAndDownload;
+import org.my.pro.dhtcrawler.task.WriteLineToFile;
 import org.my.pro.dhtcrawler.util.DHTUtils;
 import org.my.pro.dhtcrawler.util.GsonUtils;
 
@@ -73,17 +71,6 @@ public class DefaultDhtNode extends AbstractDhtNode {
 	private long hashTime = System.currentTimeMillis();
 
 	//
-	private static String canonicalPath;
-
-	static {
-		try {
-			canonicalPath = new File("").getCanonicalPath();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-	private File file = new File(canonicalPath + "/data/hash.txt");
-	public static String NEW_LINE = System.getProperty("line.separator");
 
 	public DefaultDhtNode(byte[] id, int port) {
 		this(id, port, true);
@@ -109,17 +96,10 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 	private static long TIME_OUT = 1000 * 60 * 5;
 
-	private void writeHashToFile(byte[] hash, String code) {
-		try {
-
-			String line = DHTUtils.byteArrayToHexString(id()) + ":" + port() + ":" + DHTUtils.byteArrayToHexString(hash)
-					+ ":" + FastDateFormat.getInstance("yyyy/MM/dd HH:mm:ss").format(new Date()) + ":" + code
-					+ NEW_LINE;
-			FileUtils.writeStringToFile(file, line, true);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+	public void writeHashToFile(byte[] hash, String code) {
+		String mes = DHTUtils.byteArrayToHexString(id()) + ":" + port() + ":" + DHTUtils.byteArrayToHexString(hash)
+				+ ":" + FastDateFormat.getInstance("yyyy/MM/dd HH:mm:ss").format(new Date()) + ":" + code;
+		WriteLineToFile.getInstance().writeLineToHashFile(mes);
 	}
 
 	@Override
@@ -244,7 +224,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 			try {
 				// 直接提交下载任务
 				downloadTorrent.subTask(message.addr().getAddress().getHostAddress(),
-						defaultRequest.a().getMap().get("port").getInt(), hash, true);
+						defaultRequest.a().getMap().get("port").getInt(), hash);
 				// 重新查找perrs再下载
 				downloadTorrent.subTask_announce_peer(hash, dhtNode);
 			} catch (InvalidBEncodingException e) {

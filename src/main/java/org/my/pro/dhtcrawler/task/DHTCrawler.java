@@ -105,7 +105,7 @@ public class DHTCrawler implements DHTTask {
 				workThread.start();
 			}
 			if (checkHash != null && !checkHash.isAlive()) {
-		//		checkHash.start();
+				checkHash.start();
 			}
 		}
 
@@ -208,8 +208,11 @@ public class DHTCrawler implements DHTTask {
 								if (findNodesIpPort.contains(entry.getKey())) {
 									continue;
 								}
+								//防止缓存过多，1024判断一轮
+								if(findNodesIpPort.size() > 1024) {
+									findNodesIpPort.clear();
+								}
 								findNodesIpPort.add(entry.getKey());
-								
 								//
 								taskList.add(entry.getValue());
 							}
