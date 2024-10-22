@@ -41,7 +41,7 @@ public class WriteLineToFile {
 	 */
 	public static WriteLineToFile getInstance() {
 		if (null == instance) {
-			synchronized (TryFindPeerAndDownload.class) {
+			synchronized (WriteLineToFile.class) {
 				if (null == instance) {
 					instance = new WriteLineToFile();
 				}
