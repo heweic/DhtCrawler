@@ -171,7 +171,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 
 	
 
-	private static int MAX_NODESNUM = 20000;
+	private static int MAX_NODESNUM = 60000;
 
 	@Override
 	public void addNode(Node node) {
@@ -247,6 +247,9 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 			//
 			List<Node> nodes = findNearest(torrentHash);
 
+			if(null == nodes) {
+				return;
+			}
 			findPeersHash.put(DHTUtils.byteArrayToHexString(torrentHash), empty);
 			try {
 
@@ -265,7 +268,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 
 						//
 						if (!findNodeIpPort.contains(node.getKey())) {
-							findNodeIpPort.add(node.getValue().ip() + node.getValue().ip());
+							findNodeIpPort.add(node.getValue().ip() + node.getValue().port());
 							taskList.add(node.getValue());
 						}
 						findNodes.remove(node.getKey());
