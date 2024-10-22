@@ -248,8 +248,8 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 					findNodes.put(e.ip() + e.port(), e);
 				});
 				HashMap<String, Node> findPeers = new HashMap<String, Node>();
-				int findLevel = 20;
-				while (findNodes.size() > 0 && findPeers.size() < 8) {
+				int findLevel = 8;
+				while (findNodes.size() > 0 && findPeers.size() < 3) {
 					Iterator<Entry<String, Node>> it = findNodes.entrySet().iterator();
 
 					List<Node> taskList = new ArrayList<Node>();
