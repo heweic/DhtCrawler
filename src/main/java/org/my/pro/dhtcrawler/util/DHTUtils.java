@@ -1,6 +1,8 @@
 package org.my.pro.dhtcrawler.util;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.rng.UniformRandomProvider;
 import org.apache.commons.rng.simple.RandomSource;
@@ -8,8 +10,6 @@ import org.my.pro.dhtcrawler.Node;
 import org.my.pro.dhtcrawler.NodeId;
 import org.my.pro.dhtcrawler.routingTable.DefaultNodeInfo;
 import org.my.pro.dhtcrawler.routingTable.DhtNodeID;
-
-import io.netty.buffer.ByteBuf;
 
 /**
  * 
@@ -20,19 +20,30 @@ public class DHTUtils {
 
 	public final static byte[] MAX_NODE_ID = hexStringToByteArray("ffffffffffffffffffffffffffffffffffffffff");
 
-	public static Node readNodeInfo(ByteBuf buffer) {
+	/**
+	 * 
+	 * @param bs
+	 * @return
+	 */
+	public static List<Node> readNodeInfo(byte[] bs) {
 
-		byte[] id = new byte[20];
-		byte[] ip = new byte[4];
-		byte[] port = new byte[2];
-		buffer.readBytes(id);
-		buffer.readBytes(ip);
-		buffer.readBytes(port);
+		List<Node> nodes = new ArrayList<Node>(bs.length / 26);
 
-		NodeId nodeId = new DhtNodeID(id);
-		Node info = new DefaultNodeInfo(nodeId, ip, port);
+		for (int i = 0; i < bs.length / 26; i++) {
+			byte[] id = new byte[20];
+			System.arraycopy(bs, 26 * i, id, 0, 20);
+			byte[] ip = new byte[4];
+			System.arraycopy(bs, 26 * i + 20, ip, 0, 4);
+			byte[] port = new byte[2];
+			System.arraycopy(bs, 26 * i + 20 + 4, port, 0, 2);
 
-		return info;
+			NodeId nodeId = new DhtNodeID(id);
+			Node info = new DefaultNodeInfo(nodeId, ip, port);
+
+			nodes.add(info);
+		}
+
+		return nodes;
 	}
 
 	/**

@@ -4,7 +4,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.my.pro.dhtcrawler.DHTTask;
 import org.my.pro.dhtcrawler.LocalDHTNode;
-import org.my.pro.dhtcrawler.util.DHTUtils;
 
 public class CleanTimeOutFuture implements DHTTask {
 
@@ -36,16 +35,16 @@ public class CleanTimeOutFuture implements DHTTask {
 
 				}
 			}
-		},DHTUtils.byteArrayToHexString(localDHTNode.id()) +":CleanTimeOutThread");
+		}, localDHTNode.port() + ":CleanTimeOutThread");
 		thread.start();
-		
-		log.info(DHTUtils.byteArrayToHexString(localDHTNode.id()) +"清理过期Futrue线程启动");
+
+		log.info(localDHTNode.port() + "清理过期Futrue线程启动");
 	}
 
 	@Override
 	public void stop() {
 		thread.interrupt();
-		
+
 	}
 
 }

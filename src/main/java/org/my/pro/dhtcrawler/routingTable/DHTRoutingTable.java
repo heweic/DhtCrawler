@@ -49,9 +49,16 @@ public class DHTRoutingTable implements RoutingTable {
 
 	@Override
 	public void resetNodeId(byte[] id) {
-		// 仅更新，不做复杂的桶元素位置重置
+		// 更新ID
 		this.localNodeId = id;
+		//
+		// 初始化容器
+		buckets.clear();
+		buckets = new ArrayList<ConcurrentSkipListMap<BigInteger, Node>>(bucketSize);
 
+		for (int i = 0; i < bucketSize; i++) {
+			buckets.add(new ConcurrentSkipListMap<BigInteger, Node>());
+		}
 	}
 
 	@Override

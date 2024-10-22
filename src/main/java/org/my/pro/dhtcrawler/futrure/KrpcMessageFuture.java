@@ -8,7 +8,7 @@ public class KrpcMessageFuture implements Future {
 	private KrpcMessage response;
 	private long createTime = System.currentTimeMillis();
 	//
-	public final static long TIME_OUT = 1500 ;
+	public final static long TIME_OUT = 800 ;
 	
 	public final static long LIVE_TIME = TIME_OUT * 2;
 	private final Object lock = new Object();

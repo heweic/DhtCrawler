@@ -3,7 +3,9 @@ package org.my.pro.dhtcrawler.task;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -83,7 +85,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 	 * 
 	 * @param hash
 	 */
-	public void subTask_findpeers(byte[] hash , LocalDHTNode localDHTNode) {
+	public void subTask_findpeers(byte[] hash, LocalDHTNode localDHTNode) {
 		if (!state) {
 			return;
 		}
@@ -92,7 +94,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 			return;
 		}
 		//
-		tryFindPeerExe_findpeers.execute(new RunTask(hash,localDHTNode));
+		tryFindPeerExe_findpeers.execute(new RunTask(hash, localDHTNode));
 	}
 
 	/**
@@ -100,7 +102,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 	 * 
 	 * @param hash
 	 */
-	public void subTask_announce_peer(byte[] hash ,LocalDHTNode localDHTNode) {
+	public void subTask_announce_peer(byte[] hash, LocalDHTNode localDHTNode) {
 		if (!state) {
 			return;
 		}
@@ -109,7 +111,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 			return;
 		}
 		//
-		tryFindPeerExe_announce_peer.execute(new RunTask(hash , localDHTNode));
+		tryFindPeerExe_announce_peer.execute(new RunTask(hash, localDHTNode));
 	}
 
 	/**
@@ -176,25 +178,6 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		allNodes.put(key, node);
 
 	}
-//
-//	/**
-//	 * 随机抓一个节点用于执行find_peers
-//	 * 
-//	 * @return
-//	 */
-//	private LocalDHTNode randomGet() {
-//
-//		int index = DHTUtils.rng.nextInt(0, localDHTNodes.size());
-//
-//		int i = 0;
-//		for (LocalDHTNode node : localDHTNodes) {
-//			if (i == index) {
-//				return node;
-//			}
-//			i++;
-//		}
-//		return null;
-//	}
 
 	public List<Node> findNearest(byte[] hash) {
 		byte[] distance = DHTUtils.xorDistance(DHTUtils.MAX_NODE_ID, hash);
@@ -215,9 +198,9 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		}
 		// 填充
 		if (count < 4 && !change) {
-			
+
 			Entry<BigInteger, Node> enty = allNodes.lowerEntry(key);
-			
+
 			if (null == enty) { // 未填满换方向
 				fillInLocalNodes(list, count, true, key);
 			} else {
@@ -231,16 +214,16 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		}
 		// 换方向填充
 		if (change) {
-			
+
 			Entry<BigInteger, Node> enty = allNodes.higherEntry(key);
-			
+
 			if (null == enty) {
 				return;
-			}else {
+			} else {
 				list.add(enty.getValue());
 				fillInLocalNodes(list, count++, true, enty.getKey());
 			}
-			
+
 		}
 	}
 
@@ -248,8 +231,6 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 
 		private byte[] hash;
 		private LocalDHTNode dhtNode;
-
-	
 
 		public RunTask(byte[] hash, LocalDHTNode dhtNode) {
 			super();
@@ -268,12 +249,37 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 			findPeersHash.put(targetHash, empty);
 			try {
 
-			//	log.info("开始尝试下载:" + DHTUtils.byteArrayToHexString(targetHash) + "node节点数:" +
-			//	nodes.size());
-
-				for (Node n : nodes) {
-					getPerrs(n.ip(), n.port(), targetHash, 0,dhtNode);
+				HashSet<String> findNodeIpPort = new HashSet<String>();
+				HashMap<String, Node> findNodes = new HashMap<String, Node>();
+				nodes.forEach(e -> {
+					findNodes.put(e.ip() + e.port(), e);
+				});
+				HashMap<String, Node> findPeers = new HashMap<String, Node>();
+				int findLevel = 20;
+				while (findNodes.size() > 0 && findNodes.size() < 8) {
+					Iterator<Entry<String, Node>> it = findNodes.entrySet().iterator();
+					while (it.hasNext()) {
+						Entry<String, Node> entry = it.next();
+						
+						if(findNodeIpPort.contains(entry.getKey())) {
+							continue;
+						}
+						//
+						getPerrs(entry.getValue().ip(), entry.getValue().port(), targetHash, dhtNode,
+								 findNodes, findPeers);
+						//
+						it.remove();
+					}
+					//
+					findLevel --;
+					if(findLevel == 0) {
+						break;
+					}
 				}
+				//
+				findPeers.entrySet().forEach(e -> {
+					subTask(e.getValue().ip(), e.getValue().port(), targetHash, false);
+				});
 
 			} catch (Exception e) {
 				log.error(e.getMessage());
@@ -283,12 +289,11 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 
 		}
 
-		public void getPerrs(String ip, int port, byte[] hash, int findCount , LocalDHTNode localDHTNode) {
+		public void getPerrs(String ip, int port, byte[] hash, LocalDHTNode localDHTNode,
+				HashMap<String, Node> findNodes, HashMap<String, Node> findPeers) {
 
 			//
-			if (findCount > 16) {
-				return;
-			}
+
 			// 给随机一个nodeId
 			KrpcMessage get_peers = MessageFactory.createGet_peers(ip, port, DHTUtils.generateNodeId(), hash);
 			// 可能返回nodeList或peerList
@@ -307,14 +312,9 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 				if (defaultResponse.r().getMap().containsKey(KeyWord.NODES)) {
 					byte[] bs = defaultResponse.r().getMap().get(KeyWord.NODES).getBytes();
 
-					ByteBuf byteBuf = Unpooled.wrappedBuffer(bs);
-					int num = bs.length / 26;
+					List<Node> nodes = DHTUtils.readNodeInfo(bs);
 					// 添加新节点
-					for (int i = 0; i < num; i++) {
-						Node info = DHTUtils.readNodeInfo(byteBuf);
-						getPerrs(info.ip(), info.port(), hash, findCount , localDHTNode);
-
-					}
+					nodes.forEach(info ->{findNodes.put(info.ip() + info.port(), info);});
 
 				}
 				// 响应包含VALUE，针对get_peer的响应
@@ -325,8 +325,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 						for (BEncodedValue bv : list) {
 							ByteBuf byteBuf = Unpooled.wrappedBuffer(bv.getBytes());
 							Node peer = readIpPort(byteBuf);
-							findCount += 1;
-							subTask(peer.ip(), peer.port(), hash, false);
+							findPeers.put(peer.ip(), peer);
 						}
 
 					} catch (Exception e) {
@@ -357,7 +356,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		}
 		state = true;
 
-		tryFindPeerExe_findpeers = Executors.newFixedThreadPool(64);
+		tryFindPeerExe_findpeers = Executors.newFixedThreadPool(126);
 		tryFindPeerExe_announce_peer = Executors.newCachedThreadPool();
 		downloadTorrentExe = Executors.newCachedThreadPool();
 		findPeersHash = new ConcurrentHashMap<byte[], Object>();

@@ -107,7 +107,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 	}
 
-	private static long TIME_OUT = 1000 * 60 * 2;
+	private static long TIME_OUT = 1000 * 60 * 5;
 
 	private void writeHashToFile(byte[] hash, String code) {
 		try {

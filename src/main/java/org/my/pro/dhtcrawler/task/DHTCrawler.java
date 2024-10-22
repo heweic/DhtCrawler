@@ -1,6 +1,13 @@
 package org.my.pro.dhtcrawler.task;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -14,11 +21,14 @@ import org.my.pro.dhtcrawler.message.DefaultResponse;
 import org.my.pro.dhtcrawler.message.MessageFactory;
 import org.my.pro.dhtcrawler.util.DHTUtils;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-
 /**
- * @author hew 爬虫核心逻辑;不断的发送find_node 认识更多的节点 如果当前节点，长时间未获得哈希，修改当前节点ID
+ * @author hew
+ * 
+ *         <pre>
+ *  	1.随机一个节点，尝试发现其周围节点
+ *  	2.如果节点发现完毕，更换ID
+ *  	3.如果节点长时间没有获得hash,更换ID
+ *         </pre>
  */
 public class DHTCrawler implements DHTTask {
 
@@ -45,10 +55,14 @@ public class DHTCrawler implements DHTTask {
 
 	}
 
+	/**
+	 * 初始化任务，加入DHT网络
+	 */
 	class InitTask implements Runnable {
 
 		@Override
 		public void run() {
+			log.info("InitTask启动!");
 			while (!Thread.currentThread().isInterrupted()) {
 
 				// 根据自身ID，查询自己距离较近的节点并建立联系
@@ -56,21 +70,18 @@ public class DHTCrawler implements DHTTask {
 
 					byte[] targetNode = closetId();
 
-					int nodeSize = dhtNode.targetSize(null);
-
 					// 如果路由表中的节点数量小于8 执行初始化逻辑
-					if (nodeSize < 8) {
+					if (dhtNode.targetSize(null) < 8) {
 						//
-						KrpcMessage krpcMessage4 = MessageFactory.createFindNode("router.utorrent.com", 6881,
-								dhtNode.id(), targetNode);
-						KrpcMessage krpcMessage5 = MessageFactory.createFindNode("dht.transmissionbt.com", 6881,
-								dhtNode.id(), targetNode);
-						KrpcMessage krpcMessage6 = MessageFactory.createFindNode("router.bittorrent.com", 6881,
-								dhtNode.id(), targetNode);
 
-						dhtNode.sendMessage(krpcMessage4);
-						dhtNode.sendMessage(krpcMessage5);
-						dhtNode.sendMessage(krpcMessage6);
+						boolean find1 = initfindNode("router.utorrent.com", 6881, targetNode);
+						boolean find2 = initfindNode("dht.transmissionbt.com", 6881, targetNode);
+						boolean find3 = initfindNode("router.bittorrent.com", 6881, targetNode);
+
+						if (!find1 && !find2 && !find3 && dhtNode.targetSize(null) == 0) {
+							dhtNode.resetId(DHTUtils.generateNodeId());
+						}
+
 					} else {
 						//
 						break;
@@ -82,57 +93,57 @@ public class DHTCrawler implements DHTTask {
 
 				}
 				try {
-					Thread.sleep(2000);
+					Thread.sleep(10);
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
+			log.info("InitTask结束!");
 			//
-			workThread.start();
-			//
-			checkHash.start();
+			if (workThread != null && !workThread.isAlive()) {
+				workThread.start();
+			}
+			if (checkHash != null && !checkHash.isAlive()) {
+		//		checkHash.start();
+			}
+		}
+
+		private boolean initfindNode(String ip, int port, byte[] nodeId) {
+			KrpcMessage messge = MessageFactory.createFindNode(ip, port, dhtNode.id(), nodeId);
+			KrpcMessage response = dhtNode.call(messge).getValue();
+
+			try {
+				if (null != response) {
+
+					DefaultResponse defaultResponse = (DefaultResponse) response;
+
+					if (defaultResponse.r().getMap().containsKey(KeyWord.NODES)) {
+						return defaultResponse.r().getMap().containsKey(KeyWord.NODES);
+
+					}
+				}
+			} catch (Exception e) {
+				return false;
+			}
+			return false;
 		}
 	}
 
-	class workTask implements Runnable {
-		
-		@Override
-		public void run() {
-			
-			log.info(Thread.currentThread().getName() + "开始运行！");
-			
-			while (!Thread.currentThread().isInterrupted()) {
-				//
-				byte[] targetNode = closetId();
-				List<Node> nodes = TryFindPeerAndDownload.getInstance().findNearest(targetNode);
-				if (nodes.size() > 0) {
-					for (Node node : nodes) {
-						findNode(node, targetNode , 0);
-					}
-				}
-				try {
-					Thread.sleep(1000 * 1);
-				} catch (InterruptedException e) {
-				}
-			}
+	class findPeerTask implements Runnable {
+		private Node node;
+		private byte[] targetNode;
+		private ConcurrentHashMap<String, Node> rs;
 
+		public findPeerTask(Node node, byte[] targetNode, ConcurrentHashMap<String, Node> rs) {
+			this.node = node;
+			this.targetNode = targetNode;
+			this.rs = rs;
 		}
 
-		//
-		private void findNode(Node node, byte[] targetNode , int findNum) {
-			if(findNum > (8 *20)) { //控制一下递归结果数
-				return;
-			}
-			if (Thread.currentThread().isInterrupted()) {
-				return;
-			}
-			try {
-				Thread.sleep(10);
-			} catch (Exception e) {
-				// TODO: handle exception
-			}
-
+		@Override
+		public void run() {
+			//
 			KrpcMessage findNodeMes = MessageFactory.createFindNode(node.ip(), node.port(), dhtNode.id(), targetNode);
 			try {
 				Future future = dhtNode.call(findNodeMes);
@@ -144,15 +155,13 @@ public class DHTCrawler implements DHTTask {
 					if (defaultResponse.r().getMap().containsKey(KeyWord.NODES)) {
 						byte[] bs = defaultResponse.r().getMap().get(KeyWord.NODES).getBytes();
 
-						ByteBuf byteBuf = Unpooled.wrappedBuffer(bs);
-						int num = bs.length / 26;
+						List<Node> nodes = DHTUtils.readNodeInfo(bs);
 						//
-						for (int i = 0; i < num; i++) {
-							Node findNode = DHTUtils.readNodeInfo(byteBuf);
-							//log.info(Thread.currentThread().getName() + "找到新节点" + findNode.ip());
-							//
-							findNode(findNode, targetNode ,findNum ++);
-						}
+
+						nodes.forEach(findNode -> {
+							rs.put(findNode.ip() + findNode.port(), findNode);
+
+						});
 
 					}
 				}
@@ -163,32 +172,109 @@ public class DHTCrawler implements DHTTask {
 
 	}
 
+	class workTask implements Runnable {
+
+		private ExecutorService executorService = Executors.newFixedThreadPool(32);
+
+		@Override
+		public void run() {
+
+			log.info(Thread.currentThread().getName() + "开始运行！");
+
+			while (!Thread.currentThread().isInterrupted()) {
+				//
+				byte[] targetNode = closetId();
+				List<Node> nodes = dhtNode.findNearest(targetNode);
+				if (nodes.size() > 0) {
+
+					// 每一层待执行查找的node
+					ConcurrentHashMap<String, Node> rs = new ConcurrentHashMap<String, Node>();
+					nodes.forEach(e -> rs.put(e.ip() + e.port(), e));
+					HashSet<String> findNodesIpPort = new HashSet<String>();
+
+					try {
+
+						while (rs.size() > 0 || !Thread.currentThread().isInterrupted()) {
+							List<java.util.concurrent.Future<?>> futures = new ArrayList<java.util.concurrent.Future<?>>(
+									rs.size());
+							//
+							Iterator<Entry<String, Node>> it = rs.entrySet().iterator();
+							List<Node> taskList = new ArrayList<Node>();
+							//遍历待执行任务
+							while (it.hasNext()) {
+								Entry<String, Node> entry = it.next();
+								it.remove();
+								//
+								if (findNodesIpPort.contains(entry.getKey())) {
+									continue;
+								}
+								findNodesIpPort.add(entry.getKey());
+								
+								//
+								taskList.add(entry.getValue());
+							}
+							//提交执行
+							taskList.forEach( e->{
+								futures.add(executorService.submit(new findPeerTask(e, targetNode, rs)));
+							});
+							//等待所有任务执行完成
+							for (int i = 0; i < futures.size(); i++) {
+								futures.get(i).get();
+							}
+	
+						//	log.info(DHTUtils.byteArrayToHexString(targetNode) + "发现node数量:" + rs.size() + "遍历节点:"
+						// + findNodesIpPort.size());
+							Thread.sleep(50);
+							
+						}
+					} catch (InterruptedException e) {
+						Thread.currentThread().interrupt();
+					} catch (Exception e) {
+						// TODO: handle exception
+					}
+
+				}
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+				}
+			}
+			//
+			executorService.shutdownNow();
+			log.info(Thread.currentThread().getName() + "结束!");
+			//
+		}
+
+	}
+
 	class checkTask implements Runnable {
 
 		@Override
 		public void run() {
+			log.info("checkTask启动!");
 			while (!Thread.currentThread().isInterrupted()) {
-
-				if (dhtNode.hasGetHash()) {
-					dhtNode.resetId(DHTUtils.generateNodeId());
+				//
+				if (!dhtNode.hasGetHash() && !initThread.isAlive()) {
+					byte[] id = DHTUtils.generateNodeId();
+				//	log.info("重置" + dhtNode.port() + "ID:" + DHTUtils.byteArrayToHexString(id));
+					dhtNode.resetId(id);
 
 					//
 					workThread.interrupt();
 					try {
 						workThread.join();
 					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
-					dhtNode.resetId(DHTUtils.generateNodeId());
 					workThread = new Thread(new workTask(), dhtNode.port() + "-dhtcrawler-workThread");
-					workThread.start();
+					initThread = new Thread(new InitTask(), dhtNode.port() + "-dhtcrawler-initThread");
+					initThread.start();
 				}
 
 				try {
 					Thread.sleep(1000);
 				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
@@ -212,11 +298,10 @@ public class DHTCrawler implements DHTTask {
 		// 不一致的字节，随机填充
 		byte[] random = new byte[target.length - tmp];
 		DHTUtils.nextBytes(random);
-		// log.info("随机:" + DHTUtils.byteArrayToHexString(random));
 		System.arraycopy(random, 0, target, tmp, random.length);
 		//
 		tmp--;
-		if (tmp == -1) {
+		if (tmp == 14) {
 			tmp = 18;
 		}
 		//
@@ -226,15 +311,15 @@ public class DHTCrawler implements DHTTask {
 	@Override
 	public synchronized void start() {
 		if (!state) {
-			initThread = new Thread(new InitTask(),dhtNode.port() + "-dhtcrawler-initThread");
+			log.info(dhtNode.port() + "爬虫启动!");
+			initThread = new Thread(new InitTask(), dhtNode.port() + "-dhtcrawler-initThread");
 			initThread.start();
 
 			workThread = new Thread(new workTask(), dhtNode.port() + "-dhtcrawler-workThread");
 
-			checkHash = new Thread(new checkTask(),dhtNode.port() + "-dhtcrawler-checkHashThread");
+			checkHash = new Thread(new checkTask(), dhtNode.port() + "-dhtcrawler-checkHashThread");
 
 			state = true;
-			log.info(DHTUtils.byteArrayToHexString(dhtNode.id()) + "爬虫启动!");
 		}
 	}
 
@@ -252,6 +337,7 @@ public class DHTCrawler implements DHTTask {
 			if (checkHash.isAlive()) {
 				checkHash.interrupt();
 			}
+			state = false;
 		}
 	}
 
