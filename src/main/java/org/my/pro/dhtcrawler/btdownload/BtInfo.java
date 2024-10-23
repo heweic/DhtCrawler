@@ -123,7 +123,7 @@ public class BtInfo {
 
 			btFileInfo.setLength(file.get("length").getLong());
 			btFileInfo.setPath(sb.toString());
-			btFileInfo.setSize(BtUtils.lengthStr(length));
+			btFileInfo.setSize(BtUtils.lengthStr(file.get("length").getLong()));
 
 			files.add(btFileInfo);
 		}

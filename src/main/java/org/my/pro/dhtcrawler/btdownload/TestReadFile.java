@@ -15,7 +15,7 @@ public class TestReadFile {
 
 	public static void main(String[] args) {
 		try {
-			byte[] bs = FileUtils.readFileToByteArray(new File("D:\\453bb0d3a5dcf082fb9b46c5cdc11d766de49406"));
+			byte[] bs = FileUtils.readFileToByteArray(new File("D:\\2996b84655d1c5efea9dcfab13217cee216e3885"));
 
 			BEncodedValue bEncodedValue = BDecoder.bdecode(ByteBuffer.wrap(bs));
 			System.out.println(BEncoder.encode(bEncodedValue.getMap()).array().length);
@@ -23,7 +23,7 @@ public class TestReadFile {
 			// System.out.println("剩余待解析:" + (bs.length -
 			// BEncoder.encode(bEncodedValue.getMap()).array().length));
 
-			BtInfo btInfo = new BtInfo(bEncodedValue, "11136dea456c609542b2b5824e92a8e266ab26b5");
+			BtInfo btInfo = new BtInfo(bEncodedValue, "2996b84655d1c5efea9dcfab13217cee216e3885");
 
 			System.out.println(GsonUtils.toJsonString(btInfo));
 
