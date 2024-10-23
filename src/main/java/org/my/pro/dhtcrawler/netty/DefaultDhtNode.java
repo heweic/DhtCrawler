@@ -86,11 +86,6 @@ public class DefaultDhtNode extends AbstractDhtNode {
 	}
 
 	public DefaultDhtNode(int port, boolean runBep09) {
-
-		//
-		if (id.length != 20) {
-			throw new IllegalArgumentException();
-		}
 		//
 		this.id = DHTUtils.generateNodeId();
 		this.port = port;
