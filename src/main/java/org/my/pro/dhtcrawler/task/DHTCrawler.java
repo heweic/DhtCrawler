@@ -37,20 +37,21 @@ public class DHTCrawler implements DHTTask {
 	private LocalDHTNode dhtNode;
 
 	/**
-	 * 加入DHT网络线程
+	 * 初始化线程
 	 */
 	private Thread initThread;
 	/**
-	 * 爬虫线程
+	 * 工作线程
 	 */
 	private Thread workThread;
-
+	/**
+	 * 检查节点是否获得哈希线程
+	 */
 	private Thread checkHash;
 
 	private volatile boolean state = false;
 
 	public DHTCrawler(LocalDHTNode dhtNode) {
-		super();
 		this.dhtNode = dhtNode;
 
 	}
@@ -62,7 +63,7 @@ public class DHTCrawler implements DHTTask {
 
 		@Override
 		public void run() {
-			log.info("InitTask启动!");
+			//
 			while (!Thread.currentThread().isInterrupted()) {
 
 				// 根据自身ID，查询自己距离较近的节点并建立联系
@@ -72,12 +73,12 @@ public class DHTCrawler implements DHTTask {
 
 					// 如果路由表中的节点数量小于8 执行初始化逻辑
 					if (dhtNode.targetSize(null) < 8) {
-						//
 
 						boolean find1 = initfindNode("router.utorrent.com", 6881, targetNode);
 						boolean find2 = initfindNode("dht.transmissionbt.com", 6881, targetNode);
 						boolean find3 = initfindNode("router.bittorrent.com", 6881, targetNode);
-
+						
+						//如果当前随机到的ID，未查询到节点，重新生成
 						if (!find1 && !find2 && !find3 && dhtNode.targetSize(null) == 0) {
 							dhtNode.resetId(DHTUtils.generateNodeId());
 						}
@@ -99,7 +100,6 @@ public class DHTCrawler implements DHTTask {
 					e.printStackTrace();
 				}
 			}
-			log.info("InitTask结束!");
 			//
 			if (workThread != null && !workThread.isAlive()) {
 				workThread.start();
@@ -179,7 +179,7 @@ public class DHTCrawler implements DHTTask {
 		@Override
 		public void run() {
 
-			log.info(Thread.currentThread().getName() + "开始运行！");
+			//
 
 			while (!Thread.currentThread().isInterrupted()) {
 				//
@@ -203,7 +203,6 @@ public class DHTCrawler implements DHTTask {
 							//遍历待执行任务
 							while (it.hasNext()) {
 								Entry<String, Node> entry = it.next();
-								it.remove();
 								//
 								if (findNodesIpPort.contains(entry.getKey())) {
 									continue;
@@ -216,6 +215,8 @@ public class DHTCrawler implements DHTTask {
 								//
 								taskList.add(entry.getValue());
 							}
+							//清空待执行表
+							rs.clear();
 							//提交执行
 							taskList.forEach( e->{
 								futures.add(executorService.submit(new findPeerTask(e, targetNode, rs)));
@@ -224,9 +225,7 @@ public class DHTCrawler implements DHTTask {
 							for (int i = 0; i < futures.size(); i++) {
 								futures.get(i).get();
 							}
-	
-						//	log.info(DHTUtils.byteArrayToHexString(targetNode) + "发现node数量:" + rs.size() + "遍历节点:"
-						// + findNodesIpPort.size());
+							//
 							Thread.sleep(500);
 							
 						}
@@ -245,7 +244,6 @@ public class DHTCrawler implements DHTTask {
 			}
 			//
 			executorService.shutdownNow();
-			log.info(Thread.currentThread().getName() + "结束!");
 			//
 		}
 
@@ -255,26 +253,26 @@ public class DHTCrawler implements DHTTask {
 
 		@Override
 		public void run() {
-			log.info("checkTask启动!");
+			//
 			while (!Thread.currentThread().isInterrupted()) {
 				//
 				if (!dhtNode.hasGetHash() && !initThread.isAlive()) {
-					byte[] id = DHTUtils.generateNodeId();
-				//	log.info("重置" + dhtNode.port() + "ID:" + DHTUtils.byteArrayToHexString(id));
-					dhtNode.resetId(id);
-
-					//
+					//重置节点ID
+					dhtNode.resetId(DHTUtils.generateNodeId());
+					//关闭工作线程
 					workThread.interrupt();
 					try {
 						workThread.join();
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
+					//重新初始化初始化线程及工作线程
 					workThread = new Thread(new workTask(), dhtNode.port() + "-dhtcrawler-workThread");
 					initThread = new Thread(new InitTask(), dhtNode.port() + "-dhtcrawler-initThread");
+					//工作线程启动
 					initThread.start();
 				}
-
+				//
 				try {
 					Thread.sleep(1000);
 				} catch (InterruptedException e) {
@@ -304,6 +302,7 @@ public class DHTCrawler implements DHTTask {
 		System.arraycopy(random, 0, target, tmp, random.length);
 		//
 		tmp--;
+		//控制随机范围
 		if (tmp == 14) {
 			tmp = 18;
 		}
@@ -317,11 +316,11 @@ public class DHTCrawler implements DHTTask {
 			log.info(dhtNode.port() + "爬虫启动!");
 			initThread = new Thread(new InitTask(), dhtNode.port() + "-dhtcrawler-initThread");
 			initThread.start();
-
+			//
 			workThread = new Thread(new workTask(), dhtNode.port() + "-dhtcrawler-workThread");
-
+			//
 			checkHash = new Thread(new checkTask(), dhtNode.port() + "-dhtcrawler-checkHashThread");
-
+			//
 			state = true;
 		}
 	}

@@ -8,11 +8,12 @@ import java.util.concurrent.Executors;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.time.FastDateFormat;
+import org.my.pro.dhtcrawler.DHTTask;
 
 /**
  * 文件保存
  */
-public class WriteLineToFile {
+public class WriteLineToFile implements DHTTask{
 
 	private static volatile WriteLineToFile instance;
 
@@ -68,6 +69,18 @@ public class WriteLineToFile {
 				e.printStackTrace();
 			}
 		});
+	}
+
+	@Override
+	public void start() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void stop() {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

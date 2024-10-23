@@ -16,16 +16,10 @@ public abstract class AbstractMessageHandler implements MessageHandler {
 	@Override
 	public KrpcMessage handler(KrpcMessage message) throws Exception {
 
-//		if(message instanceof)
-//		// 刷新节点活跃时间
-//		routingTable.nodeActive(id);
-
 		//
 		return handler0(message);
 	}
 
 	public abstract KrpcMessage handler0(KrpcMessage message) throws Exception;
-	
-	
 
 }

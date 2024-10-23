@@ -4,12 +4,13 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.conn.routing.HttpRoute;
-import org.my.pro.dhtcrawler.saver.MagnetSaver;
+import org.my.pro.dhtcrawler.Saver;
 import org.my.pro.dhtcrawler.saver.TxtMagnetSaver;
 
 import be.adaxisoft.bencode.BDecoder;
 import be.adaxisoft.bencode.BEncodedValue;
 
+@Deprecated
 public class TorrageMagnetTo extends HttpMagnetToTorrent {
 
 	// https://t.torrage.info/download?h=640FE84C613C17F663551D218689A64E8AEBEABE
@@ -17,7 +18,7 @@ public class TorrageMagnetTo extends HttpMagnetToTorrent {
 	private static String URL_TMP = "https://t.torrage.info/download?h=%s";
 	private static HttpRoute route = new HttpRoute(new HttpHost("t.torrage.info", 80));
 
-	public TorrageMagnetTo(MagnetSaver magnetSaver) {
+	public TorrageMagnetTo(Saver magnetSaver) {
 		super(magnetSaver);
 	}
 
@@ -45,7 +46,7 @@ public class TorrageMagnetTo extends HttpMagnetToTorrent {
 	}
 
 	public static void main(String[] args) {
-		MagnetSaver magnetSaver = new TxtMagnetSaver();
+		Saver magnetSaver = new TxtMagnetSaver();
 		String hash = "64DCA5F30A4C093E58CDF17FC937DB52D3BE4228";
 		System.out.println(hash.toUpperCase());
 

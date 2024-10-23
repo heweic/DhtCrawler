@@ -4,8 +4,7 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.conn.routing.HttpRoute;
-import org.my.pro.dhtcrawler.saver.MagnetSaver;
-import org.my.pro.dhtcrawler.saver.TxtMagnetSaver;
+import org.my.pro.dhtcrawler.Saver;
 
 import be.adaxisoft.bencode.BDecoder;
 import be.adaxisoft.bencode.BEncodedValue;
@@ -17,7 +16,7 @@ import be.adaxisoft.bencode.BEncodedValue;
  */
 public class ItorrentsMagnetTo extends HttpMagnetToTorrent {
 
-	public ItorrentsMagnetTo(MagnetSaver magnetSaver) {
+	public ItorrentsMagnetTo(Saver magnetSaver) {
 		super(magnetSaver);
 	}
 
@@ -40,21 +39,10 @@ public class ItorrentsMagnetTo extends HttpMagnetToTorrent {
 	public BtInfo handlerEntity(HttpEntity entity, String hash) throws Exception {
 
 		try {
-			// String result = EntityUtils.toString(entity);
 
 			BEncodedValue value = BDecoder.decode(entity.getContent());
 			return new BtInfo(value, hash);
 
-//			ScriptEngineManager sem = new ScriptEngineManager();
-//			ScriptEngine engine = sem.getEngineByName("javascript");
-//			try {
-//
-//				Object obj = engine.eval(result);
-//				System.out.println(obj);
-//			} catch (Exception e) {
-//				e.printStackTrace();
-//			}
-//			return new BtInfo();
 		} catch (Exception e) {
 			throw e;
 		}
@@ -63,17 +51,6 @@ public class ItorrentsMagnetTo extends HttpMagnetToTorrent {
 	@Override
 	public HttpRoute httpRoute() {
 		return route;
-	}
-
-	public static void main(String[] args) {
-		MagnetSaver magnetSaver = new TxtMagnetSaver();
-		ItorrentsMagnetTo itorrentsMagnetTo = new ItorrentsMagnetTo(magnetSaver);
-		try {
-			itorrentsMagnetTo.convert("B415C913643E5FF49FE37D304BBB5E6E11AD5101");
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 	}
 
 }

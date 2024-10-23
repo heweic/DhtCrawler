@@ -1,21 +1,17 @@
 package org.my.pro.dhtcrawler.btdownload;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.input.AutoCloseInputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.my.pro.dhtcrawler.task.SaveTorrent;
 import org.my.pro.dhtcrawler.util.BenCodeUtils;
 import org.my.pro.dhtcrawler.util.DHTUtils;
 
@@ -42,15 +38,6 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 public class Bep09MetadataFiles {
 
 	private static Log log = LogFactory.getLog(Bep09MetadataFiles.class);
-	private static String canonicalPath;
-
-	static {
-		try {
-			canonicalPath = new File("").getCanonicalPath();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
 
 	/**
 	 * 握手消息长度
@@ -105,7 +92,7 @@ public class Bep09MetadataFiles {
 				+ (null == mes ? "" : mes));
 	}
 
-	public boolean get() {
+	public void get() {
 		//
 		try {
 			isDownload.await(DOWNLOAD_TIME_OUT, TimeUnit.MILLISECONDS);
@@ -113,13 +100,6 @@ public class Bep09MetadataFiles {
 			e.printStackTrace();
 		}
 		//
-
-		//
-		boolean isDown = new File(canonicalPath + "/torrent/" + DHTUtils.byteArrayToHexString(hash)).exists();
-		if (!isDown) {
-			close();
-		}
-		return isDown;
 	}
 
 	private void close() {
@@ -135,8 +115,9 @@ public class Bep09MetadataFiles {
 	}
 
 	public void tryDownload() {
+
 		// 如果文件已下载，不执行
-		if (new File(canonicalPath + "/torrent/" + DHTUtils.byteArrayToHexString(hash)).exists()) {
+		if (SaveTorrent.getInstance().exists(DHTUtils.byteArrayToHexString(hash))) {
 			return;
 		}
 
@@ -171,7 +152,7 @@ public class Bep09MetadataFiles {
 
 			channelFuture.channel().closeFuture().await();
 		} catch (Exception e) {
-			//e.printStackTrace();
+			// e.printStackTrace();
 			isDownload.countDown();
 		} finally {
 			group.shutdownGracefully();
@@ -364,31 +345,13 @@ public class Bep09MetadataFiles {
 					byte[] fulbs = new byte[fullData.readableBytes()];
 					fullData.readBytes(fulbs);
 
-					synWriteBytesToFile(DHTUtils.byteArrayToHexString(hash), fulbs);
+					//
+					SaveTorrent.getInstance().synWriteBytesToFile(DHTUtils.byteArrayToHexString(hash), fulbs);
 					//
 					logMes("下載完成!");
 					//
 					close();
 				}
-			}
-		}
-	}
-
-	private static final ConcurrentHashMap<String, Object> lockMap = new ConcurrentHashMap<String, Object>();
-
-	private void synWriteBytesToFile(String hash, byte[] bs) throws Exception{
-		//校验数据完整性
-		if(!DigestUtils.sha1Hex(bs).equals(hash)) {
-			throw new Exception(hash + "数据SHA1校验失败!");
-		}
-		Object lock = lockMap.computeIfAbsent(hash, key -> new Object());
-		synchronized (lock) {
-			try {
-				FileUtils.writeByteArrayToFile(new File(canonicalPath + "/torrent/" + hash), bs, true);
-			} catch (Exception e) {
-
-			} finally {
-				lockMap.remove(hash);
 			}
 		}
 	}

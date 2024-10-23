@@ -11,9 +11,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.io.FileUtils;
 import org.my.pro.dhtcrawler.btdownload.HttpMagnetToTorrent;
 import org.my.pro.dhtcrawler.btdownload.ItorrentsMagnetTo;
-import org.my.pro.dhtcrawler.saver.MagnetSaver;
 import org.my.pro.dhtcrawler.saver.TxtMagnetSaver;
 
+@Deprecated
 public class Convert {
 
 	private volatile static Convert convert = new Convert();
@@ -56,7 +56,7 @@ public class Convert {
 			//
 			List<String> lines = FileUtils.readLines(file);
 
-			MagnetSaver magnetSaver = new TxtMagnetSaver();
+			Saver magnetSaver = new TxtMagnetSaver();
 			HttpMagnetToTorrent httpMagnetToTorrent = new ItorrentsMagnetTo(magnetSaver);
 
 			for (String s : lines) {

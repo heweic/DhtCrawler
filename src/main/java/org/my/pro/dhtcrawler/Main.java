@@ -1,7 +1,6 @@
 package org.my.pro.dhtcrawler;
 
 import org.my.pro.dhtcrawler.netty.DefaultDhtNode;
-import org.my.pro.dhtcrawler.util.DHTUtils;
 
 public class Main {
 
@@ -14,9 +13,7 @@ public class Main {
 
 			int port = tmp + i;
 
-			String id = DHTUtils.byteArrayToHexString(DHTUtils.generateNodeId());
-
-			new DefaultDhtNode(DHTUtils.hexStringToByteArray(id), port).start();
+			new DefaultDhtNode(port).start();
 		}
 
 	}

@@ -9,16 +9,16 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
-import org.my.pro.dhtcrawler.saver.MagnetSaver;
+import org.my.pro.dhtcrawler.Saver;
 
 public abstract class HttpMagnetToTorrent implements MagnetToTorrent {
 
 	private static PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
 	private static CloseableHttpClient httpClient = HttpClients.custom().setConnectionManager(cm).build();
 
-	private MagnetSaver magnetSaver;
+	private Saver magnetSaver;
 
-	public HttpMagnetToTorrent(MagnetSaver magnetSaver) {
+	public HttpMagnetToTorrent(Saver magnetSaver) {
 
 		cm.setMaxTotal(200);
 		cm.setDefaultMaxPerRoute(20);

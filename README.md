@@ -1,19 +1,37 @@
 # dhtCrawler
 
 ## 简介
-* 使用Netty实现的一个DHT爬虫
-* 实现了加入DHT，发现附近节点，通过收到的get_peers,announce_peer请求取出网络中正在寻找文件的哈希值
-* 实现了种子文件下载功能，使用DHT协议中get_peers搜索哈希的peer列表，并通过BEP09扩展协议下载torrent文件
-* 默认将种子hash保存到data/hash.txt文件
-* 默认将使用BEP09协议获得的种子文件放在/torrent文件夹下
+* 一个使用JAVA实现的BT爬虫，它会记录收集到的种子文件哈希值，及下载torrent文件
+* 磁力链格式：magnet:?xt=种子文件哈希值
+
+
+## 功能
+
+* 实现了DHT节点功能，包括节点路由表，及命令：ping，find_node，get_peers，announce_peer
+* 在DHT节点功能的基础上加入爬虫逻辑，负责发现更多的附近节点
+* 将find_node，get_peers请求过来的哈希值，储存到文件data/hash.txt
+* 使用BEP09协议扩展协议实现torrent文件下载功能，将爬取到的torrent文件放在torrent/文件夹
+
+## 爬虫逻辑
+
+* 爬虫主要功能是：去不断认识当前节点附近的节点，从而才能被动收集到种子文件哈希值
+* 爬虫持有三个线程，对应三个任务逻辑
+* 初始化线程：加入DHT网络时执行，访问固定节点执行find_node认识初始节点
+* 工作线程：根据初始节点，不断执行find_node,认识更多的节点
+* 哈希检查线程:当一段时间未获得哈希值，它会修改节点ID，停止工作线程，重启初始化线程
+
+## torrent下载逻辑
+
+* 把所有爬虫节点收集到的其他DHT节点信息存入一个由跳表数据结构实现的按节点ID距离顺序存储的节点表中
+* 需要下载torrent文件时，它会向节点表中查询其距离最近的节点，发起get_peers请求
+* 向获取到的peer按照BEP09协议标准发起最终的torrent文件下载 
 
 ## 示例代码
 ```java
 
-//使用demo
-int port = 0; //随机可用端口
-byte[] nodeId = DHTUtils.generateNodeId();//生成随机ID
-LocalDHTNode node = new DefaultDhtNode(nodeId, port);
+//启动一个DHT点
+int port = 0; //随机可用端口，长期爬取建议固定端口及固定IP
+LocalDHTNode node = new DefaultDhtNode(port);//实例化一个DHT节点
 node.start(); //启动
 			
 ```
@@ -22,23 +40,9 @@ node.start(); //启动
 
 * 可以直接打包作为SpringBoot运行
 * 也可以查看org.my.pro.dhtcrawler.Main手动启动
-* 如果需要拿到哈希，做后续操作，在DefaultDhtNode中get_peers和announce_peer编写自定义Handler
-* SpringBoot 配置说明如下
-
-```java
-
-dht.num=10 //DHT节点数量
-dht.port=60000 //起始端口
-dht.runbep09=false //是否启用BEP09扩展协议下载torrent，TCP连接能成功获取概率不大
-	
-```
-
-## 爬虫逻辑
-
-* 初始填充路由表
-* 循环执行根据自己id计算出距离较近的节点id,然后从路由表中取得node列表发送find_node
-* 循环执行当一定时间内未获得种子哈希值，需要重生成节点id，并设置为自己节点id
-
+* SpringBoot配置说明
+* dht.num=10 //DHT节点数量
+* dht.port=60000 //起始端口
 
 ## 备注
 

@@ -7,7 +7,6 @@ import org.my.pro.dhtcrawler.WorkHandler;
 import org.my.pro.dhtcrawler.message.DefaultRequest;
 import org.my.pro.dhtcrawler.message.DefaultResponse;
 import org.my.pro.dhtcrawler.util.BenCodeUtils;
-import org.my.pro.dhtcrawler.util.DHTUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,7 +22,7 @@ public class AnnouncePeerHandler extends RequestMessageHandler {
 
 	private WorkHandler workHandler;
 
-	private static Logger logger = LoggerFactory.getLogger(AnnouncePeerHandler.class);
+	public static Logger logger = LoggerFactory.getLogger(AnnouncePeerHandler.class);
 
 	public AnnouncePeerHandler(LocalDHTNode dhtNode, WorkHandler workHandler) {
 		super(dhtNode);
@@ -38,12 +37,7 @@ public class AnnouncePeerHandler extends RequestMessageHandler {
 			DefaultRequest defaultRequest = (DefaultRequest) message;
 
 			byte[] hash = defaultRequest.a().getMap().get(KeyWord.INFO_HASH).getBytes();
-
-			String mes = message.addr().getAddress().getHostAddress() + "下载端口:"
-					+ defaultRequest.a().getMap().get("port").getInt() + "种子hash:"
-					+ DHTUtils.byteArrayToHexString(hash);
-			logger.info(mes);
-
+			//
 			if (workHandler != null) {
 				workHandler.handler(hash, message);
 			}

@@ -49,44 +49,52 @@ import io.netty.channel.socket.nio.NioDatagramChannel;
 
 public class DefaultDhtNode extends AbstractDhtNode {
 
+	private static Log log = LogFactory.getLog(DefaultDhtNode.class);
+
+	// netty相关
 	private EventLoopGroup group;
 	private Bootstrap bootstrap;
 	private ChannelFuture channelFuture;
+
+	// netty运行线程
 	private Thread nodeThread;
 
-	private static Log log = LogFactory.getLog(DefaultDhtNode.class);
-
+	// DHT路由表
 	private RoutingTable routingTable;
 
+	// response handler
 	private ResponseMessageHandler responseMessageHandler;
 
-	private TryFindPeerAndDownload downloadTorrent;
+	// 清理过期同步请求
 	private CleanTimeOutFuture cleanTimeOutFuture;
-	private DHTCrawler dhtCrawler;
 
+	// 同步请求缓存
 	private ConcurrentHashMap<String, Future> futures;
 
-	// 获得哈希时间
+	// DHT爬虫
+	private DHTCrawler dhtCrawler;
+
+	// BT下载
+
+	private TryFindPeerAndDownload downloadTorrent;
+
+	// 最近获得哈希时间
 	private long hashTime = System.currentTimeMillis();
 
-	//
-
-	public DefaultDhtNode(byte[] id, int port) {
-		this(id, port, true);
+	public DefaultDhtNode(int port) {
+		this(port, true);
 	}
 
-	public DefaultDhtNode(byte[] id, int port, boolean runBep09) {
+	public DefaultDhtNode(int port, boolean runBep09) {
 
 		//
 		if (id.length != 20) {
 			throw new IllegalArgumentException();
 		}
 		//
-		this.id = id;
+		this.id = DHTUtils.generateNodeId();
 		this.port = port;
-		if (runBep09) {
-			this.downloadTorrent = TryFindPeerAndDownload.getInstance();
-		}
+		downloadTorrent = TryFindPeerAndDownload.getInstance();
 		this.cleanTimeOutFuture = new CleanTimeOutFuture(this);
 		this.dhtCrawler = new DHTCrawler(this);
 
@@ -95,8 +103,8 @@ public class DefaultDhtNode extends AbstractDhtNode {
 	private static long TIME_OUT = 1000 * 60 * 5;
 
 	public void writeHashToFile(byte[] hash, String code) {
-		String mes = DHTUtils.byteArrayToHexString(id()) + ":" + port() + ":" + DHTUtils.byteArrayToHexString(hash)
-				+ ":" + FastDateFormat.getInstance("yyyy/MM/dd HH:mm:ss").format(new Date()) + ":" + code;
+		String mes = FastDateFormat.getInstance("yyyy/MM/dd HH:mm:ss").format(new Date()) + ":"
+				+ DHTUtils.byteArrayToHexString(hash) + ":" + code;
 		WriteLineToFile.getInstance().writeLineToHashFile(mes);
 	}
 

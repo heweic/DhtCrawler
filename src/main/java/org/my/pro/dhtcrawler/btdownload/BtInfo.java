@@ -118,14 +118,12 @@ public class BtInfo {
 				}
 			}
 			// length
-			int length = file.get("length").getInt();
-			String size = BtUtils.lengthStr(length);
 
 			BtFileInfo btFileInfo = new BtFileInfo();
 
-			btFileInfo.setLength(length);
+			btFileInfo.setLength(file.get("length").getLong());
 			btFileInfo.setPath(sb.toString());
-			btFileInfo.setSize(size);
+			btFileInfo.setSize(BtUtils.lengthStr(length));
 
 			files.add(btFileInfo);
 		}

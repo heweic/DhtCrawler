@@ -23,7 +23,7 @@ public class TestReadFile {
 			// System.out.println("剩余待解析:" + (bs.length -
 			// BEncoder.encode(bEncodedValue.getMap()).array().length));
 
-			BtInfo btInfo = new BtInfo(bEncodedValue, "b16550fe59b5d7f942ffbc5c506f5ca9101fe814");
+			BtInfo btInfo = new BtInfo(bEncodedValue, "11136dea456c609542b2b5824e92a8e266ab26b5");
 
 			System.out.println(GsonUtils.toJsonString(btInfo));
 
