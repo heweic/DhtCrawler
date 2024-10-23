@@ -5,32 +5,23 @@ import java.nio.ByteBuffer;
 import org.my.pro.dhtcrawler.Node;
 import org.my.pro.dhtcrawler.NodeId;
 
-public class DefaultNodeInfo implements Node {
+/**
+ * Peer节点信息
+ */
+public class PeerInfo implements Node {
 
-	
-	private NodeId id; // 节点id
 	private byte[] ipData; // ip的字节数组
 	private byte[] portData; // 端口的字节数组
-	
-	//本地DHT节点端口
-	private int localDHTID;
 
-	public DefaultNodeInfo(NodeId id, byte[] ipData, byte[] portData , int localDHTID) {
-		this.id = id;
+	public PeerInfo(byte[] ipData, byte[] portData) {
+
 		this.ipData = ipData;
 		this.portData = portData;
-		this.localDHTID = localDHTID;
-		//
 	}
 
-
 	@Override
-	public ByteBuffer toBuf() {
-		ByteBuffer buffer = ByteBuffer.allocate(26);
-		buffer.put(id.bsId()); // ID
-		buffer.put(ipData); // IP
-		buffer.put(portData);// port
-		return buffer;
+	public NodeId nodeId() {
+		return null;
 	}
 
 	@Override
@@ -44,14 +35,13 @@ public class DefaultNodeInfo implements Node {
 	}
 
 	@Override
-	public NodeId nodeId() {
-		return id;
+	public ByteBuffer toBuf() {
+		return null;
 	}
 
 	@Override
 	public int localDHTID() {
-		// TODO Auto-generated method stub
-		return localDHTID;
+		return 0;
 	}
 
 }

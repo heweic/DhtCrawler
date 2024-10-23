@@ -155,7 +155,7 @@ public class DHTCrawler implements DHTTask {
 					if (defaultResponse.r().getMap().containsKey(KeyWord.NODES)) {
 						byte[] bs = defaultResponse.r().getMap().get(KeyWord.NODES).getBytes();
 
-						List<Node> nodes = DHTUtils.readNodeInfo(bs);
+						List<Node> nodes = DHTUtils.readNodeInfo(bs ,dhtNode);
 						//
 
 						nodes.forEach(findNode -> {

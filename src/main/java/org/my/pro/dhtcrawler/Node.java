@@ -7,15 +7,7 @@ import java.nio.ByteBuffer;
  */
 public interface Node {
 
-	/**
-	 * 最后活跃时间
-	 */
-	public long activeTime();
 
-	/**
-	 * 刷新活跃时间
-	 */
-	public void refActiveTime();
 
 	/** 节点ID */
 	public NodeId nodeId();
@@ -34,5 +26,7 @@ public interface Node {
 	 * 转字符 20字节ID + 4字节IP + 2字节端口
 	 */
 	public ByteBuffer toBuf();
+	
+	public int localDHTID();
 
 }

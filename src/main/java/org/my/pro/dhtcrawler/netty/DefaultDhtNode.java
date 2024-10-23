@@ -34,6 +34,7 @@ import org.my.pro.dhtcrawler.task.TryFindPeerAndDownload;
 import org.my.pro.dhtcrawler.task.WriteLineToFile;
 import org.my.pro.dhtcrawler.util.DHTUtils;
 import org.my.pro.dhtcrawler.util.GsonUtils;
+import org.my.pro.dhtcrawler.util.NoChangeID;
 
 import be.adaxisoft.bencode.InvalidBEncodingException;
 import io.netty.bootstrap.Bootstrap;
@@ -81,18 +82,28 @@ public class DefaultDhtNode extends AbstractDhtNode {
 	// 最近获得哈希时间
 	private long hashTime = System.currentTimeMillis();
 
+	// 本地唯一标识ID
+	private int noChangeId;
+
 	public DefaultDhtNode(int port) {
 		this(port, true);
 	}
 
 	public DefaultDhtNode(int port, boolean runBep09) {
+		noChangeId = NoChangeID.nextNum();
 		//
 		this.id = DHTUtils.generateNodeId();
 		this.port = port;
 		downloadTorrent = TryFindPeerAndDownload.getInstance();
+		downloadTorrent.registerDHTNode(this);
 		this.cleanTimeOutFuture = new CleanTimeOutFuture(this);
 		this.dhtCrawler = new DHTCrawler(this);
+		//
+	}
 
+	@Override
+	public int noChangeId() {
+		return noChangeId;
 	}
 
 	private static long TIME_OUT = 1000 * 60 * 5;
@@ -199,11 +210,8 @@ public class DefaultDhtNode extends AbstractDhtNode {
 		public void handler(byte[] hash, KrpcMessage message) {
 			hashTime = System.currentTimeMillis();
 			writeHashToFile(hash, KeyWord.GET_PEERS);
-			// get_peers获得的哈希数较多,能成功下载的概率并不大,可概率减少任务提交，腾出位置给announce_peer
-			if (DHTUtils.rng.nextInt(0, 3) != 0) {
-				// 三分之一概率丢任务
-				downloadTorrent.subTask_findpeers(hash, localDHTNode);
-			}
+			//提交下载任务
+			downloadTorrent.subTask_findpeers(hash, localDHTNode);
 		}
 
 	}
@@ -251,7 +259,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 		map.put(KeyWord.GET_PEERS, new GetPeersHandler(this, new getPeerHandler(this)));
 		map.put(KeyWord.ANNOUNCE_PEER, new AnnouncePeerHandler(this, new announcePeerHandler(this)));
 		//
-		responseMessageHandler = new DefaultResponseHandler(routingTable, this);
+		responseMessageHandler = new DefaultResponseHandler(this);
 
 		ChannelHandler channelHandler = new ChannelInitializer<NioDatagramChannel>() {
 			@Override
@@ -284,6 +292,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 					channelFuture.addListener(future -> {
 						if (future.isSuccess()) {
+
 							log.info(
 									"启动节点:" + GsonUtils.GSON.toJson(id()) + "-" + channelFuture.channel().localAddress()
 											+ "-" + DHTUtils.byteArrayToHexString(id()));

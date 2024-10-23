@@ -37,31 +37,28 @@ public interface LocalDHTNode {
 	 * @param krpcMessage
 	 */
 	public boolean back(KrpcMessage krpcMessage);
-	
+	/**
+	 * 
+	 */
 	public void clearTimeOutFutrue();
-
 	/**
 	 * 返回netty Channel
 	 * 
 	 * @return
 	 */
 	public Channel channel();
-
 	/**
 	 * 节点ID
 	 */
 	public byte[] id();
-
 	/**
 	 * 节点端口
 	 */
 	public int port();
-
 	/**
 	 * 添加节点
 	 */
 	public void add(Node info);
-
 	/**
 	 * 查询hash附近的节点
 	 * 提供给其他节点查询
@@ -89,4 +86,9 @@ public interface LocalDHTNode {
 	 * @return
 	 */
 	public boolean hasGetHash();
+	/**
+	 * 不会改变的唯一本地标识
+	 * @return
+	 */
+	public int noChangeId();
 }

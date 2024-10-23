@@ -84,7 +84,8 @@ public class Bep09MetadataFiles {
 	private Channel clientChannel;
 
 	private static int CONNECT_TIMEOUT_MILLIS = 2000;
-	private static int DOWNLOAD_TIME_OUT = CONNECT_TIMEOUT_MILLIS + 8000;
+	private static int HANDSHACK_TIME_OUT = CONNECT_TIMEOUT_MILLIS + 1000;
+	private static int DOWNLOAD_TIME_OUT = CONNECT_TIMEOUT_MILLIS + 7000;
 	private static int SO_RCVBUF = 1024 * 500;
 
 	private void logMes(String mes) {
@@ -93,11 +94,21 @@ public class Bep09MetadataFiles {
 	}
 
 	public void get() {
+		
+		try {
+			isDownload.await(HANDSHACK_TIME_OUT, TimeUnit.MILLISECONDS);
+		} catch (InterruptedException e) {
+
+		}
+		// 如果等待3秒后还在等待握手完成
+		if (isHandShack.get()) {
+			close();
+		}
 		//
 		try {
 			isDownload.await(DOWNLOAD_TIME_OUT, TimeUnit.MILLISECONDS);
 		} catch (InterruptedException e) {
-			e.printStackTrace();
+
 		}
 		//
 	}
@@ -160,7 +171,7 @@ public class Bep09MetadataFiles {
 
 	}
 
-	private int metadata_size = 0;
+	private volatile int metadata_size = 0;
 	private int ut_metadata = 0;;
 	/**
 	 * 元数据有多少块
@@ -241,7 +252,6 @@ public class Bep09MetadataFiles {
 					readInfo(bf);
 				}
 			} catch (Exception e) {
-				e.printStackTrace();
 				throw e;
 			}
 
@@ -270,8 +280,6 @@ public class Bep09MetadataFiles {
 				if (bf.readableBytes() > 5) {
 					doHandShack(bf, ctx);
 				} else {
-					isHandShack.set(false);
-
 					// 如果未获取到metadata_size,可能会在下一个包中发送
 					waitNext = true;
 					return;

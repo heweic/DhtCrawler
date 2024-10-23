@@ -8,7 +8,6 @@ import org.my.pro.dhtcrawler.KeyWord;
 import org.my.pro.dhtcrawler.KrpcMessage;
 import org.my.pro.dhtcrawler.LocalDHTNode;
 import org.my.pro.dhtcrawler.Node;
-import org.my.pro.dhtcrawler.RoutingTable;
 import org.my.pro.dhtcrawler.message.DefaultResponse;
 import org.my.pro.dhtcrawler.util.DHTUtils;
 
@@ -19,7 +18,7 @@ public class DefaultResponseHandler extends ResponseMessageHandler {
 
 	public static Log log = LogFactory.getLog(DefaultResponseHandler.class);
 
-	public DefaultResponseHandler(RoutingTable routingTable, LocalDHTNode dhtNode) {
+	public DefaultResponseHandler(LocalDHTNode dhtNode) {
 		super(dhtNode);
 	}
 
@@ -37,7 +36,7 @@ public class DefaultResponseHandler extends ResponseMessageHandler {
 				if (defaultResponse.r().getMap().containsKey(KeyWord.NODES)) {
 					byte[] bs = defaultResponse.r().getMap().get(KeyWord.NODES).getBytes();
 
-					List<Node> nodes = DHTUtils.readNodeInfo(bs);
+					List<Node> nodes = DHTUtils.readNodeInfo(bs , localNode);
 					nodes.forEach(info -> {
 						localNode.add(info);
 					});

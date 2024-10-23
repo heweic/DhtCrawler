@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -27,7 +28,7 @@ import org.my.pro.dhtcrawler.Node;
 import org.my.pro.dhtcrawler.btdownload.Bep09MetadataFiles;
 import org.my.pro.dhtcrawler.message.DefaultResponse;
 import org.my.pro.dhtcrawler.message.MessageFactory;
-import org.my.pro.dhtcrawler.routingTable.DefaultNodeInfo;
+import org.my.pro.dhtcrawler.routingTable.PeerInfo;
 import org.my.pro.dhtcrawler.util.DHTUtils;
 
 import be.adaxisoft.bencode.BEncodedValue;
@@ -38,36 +39,45 @@ import io.netty.buffer.Unpooled;
  * 下载torrent任务
  */
 public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
-	
+
 	public static Log log = LogFactory.getLog(TryFindPeerAndDownload.class);
 
-	//find_peer提交的下载任务执行线程执行器
+	// find_peer提交的下载任务执行线程执行器
 	private ExecutorService tryFindPeerExe_findpeers1;
-	//find_peer提交的下载任务执行线程执行器任务队列
+	// find_peer提交的下载任务执行线程执行器任务队列
 	private LinkedBlockingQueue<Runnable> findPeersQueue;
 
-	//announce_peer提交的下载任务执行线程执行器
+	// announce_peer提交的下载任务执行线程执行器
 	private ExecutorService tryFindPeerExe_announce_peer;
-	//下载任务执行器
+	// 下载任务执行器
 	private ExecutorService downloadTorrentExe;
-	
-	//运行状态
+
+	// 运行状态
 	private volatile boolean state = false;
 
 	// 防止重复提交哈希执行find_peers
 	private static ConcurrentHashMap<String, Object> findPeersHash;
 	// 防止重复提交IP加端口重复执行
 	private static ConcurrentHashMap<String, Object> downloadTorrentIPHash;
-	
+
 	private static final Object empty = new Object();
 
-	//单例实例
+	// 单例实例
 	private static volatile TryFindPeerAndDownload instance;
-	
-	//节点总表
+
+	// 节点总表
 	private ConcurrentSkipListMap<BigInteger, Node> allNodes;
-	//节点总表最大节点数
+	private ConcurrentHashMap<BigInteger,Object> allnodesKeyMap;
+	// 节点总表清理坏节点任务
+	private ScheduledExecutorService scheduledExecutor;
+	//节点入表时，检查其是否是坏节点
+	private ExecutorService  addCheckIsBadNode;
+
+	// 节点总表最大节点数
 	private static int MAX_NODESNUM = 60000;
+
+	//
+	private HashMap<Integer, LocalDHTNode> localDHTNodes = new HashMap<Integer, LocalDHTNode>();
 
 	private TryFindPeerAndDownload() {
 
@@ -90,19 +100,23 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		return instance;
 	}
 
+	public synchronized void registerDHTNode(LocalDHTNode localDHTNode) {
+		this.localDHTNodes.put(localDHTNode.noChangeId(), localDHTNode);
+	}
 
 	/**
 	 * 只有哈希 findPerrs提交
 	 * 
 	 * findpeers 过来的包特别的多
+	 * 
 	 * @param hash
 	 */
 	public void subTask_findpeers(byte[] hash, LocalDHTNode localDHTNode) {
 		if (!state) {
 			return;
 		}
-		//去重缓存1024个亲求为一轮判断
-		if(findPeersHash.size() > 1024) {
+		// 去重缓存1024个亲求为一轮判断
+		if (findPeersHash.size() > 1024) {
 			findPeersHash.clear();
 		}
 		// 如果提交哈希正在执行下载,防止连续提交
@@ -121,6 +135,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 	 * 只有哈希 announce_peer提交
 	 * 
 	 * announce_peer过来的包，较少
+	 * 
 	 * @param hash
 	 */
 	public void subTask_announce_peer(byte[] hash, LocalDHTNode localDHTNode) {
@@ -128,7 +143,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 			return;
 		}
 		//
-		if(findPeersHash.size() > 1024) {
+		if (findPeersHash.size() > 1024) {
 			findPeersHash.clear();
 		}
 		// 如果提交哈希正在执行查找peers,防止连续提交
@@ -151,7 +166,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 			return;
 		}
 		//
-		if(downloadTorrentIPHash.size() > 100) {
+		if (downloadTorrentIPHash.size() > 100) {
 			downloadTorrentIPHash.clear();
 		}
 		// 正在下载的任务防止重复提交
@@ -179,7 +194,8 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		//
 		downloadTorrentIPHash.put(ip + port, empty);
 	}
-
+	
+	
 	@Override
 	public void addNode(Node node) {
 		if (!state) {
@@ -187,18 +203,34 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		}
 		// 如果超过最大数量，删除一个节点再添加
 		if (allNodes.size() >= MAX_NODESNUM) {
-			allNodes.remove(allNodes.firstKey());
+			BigInteger key = allNodes.firstKey();
+			//
+			allNodes.remove(key);
+			allnodesKeyMap.remove(key);
 		}
-		// 按照最大ID值做距离计算确定在TreeMap中的位置
-		byte[] distance = DHTUtils.xorDistance(DHTUtils.MAX_NODE_ID, node.nodeId().bsId());
-		BigInteger key = DHTUtils.distanceAsBigInteger(distance);
-
-		allNodes.put(key, node);
+		//判断当前节点是否时是坏的
+		//
+		addCheckIsBadNode.execute( ()->{
+			
+			byte[] distance = DHTUtils.xorDistance(DHTUtils.MAX_NODE_ID, node.nodeId().bsId());
+			BigInteger key = DHTUtils.distanceAsBigInteger(distance);
+			//如果已存在节点，不添加
+			if(allnodesKeyMap.containsKey(key)) {
+				return;
+			}
+			//
+			if(nodeIsActive(localDHTNodes.get(node.localDHTID()), node)) {
+				allNodes.put(key, node);
+				allnodesKeyMap.put(key, empty);
+			}	
+		});
+		
+		
 
 	}
 
 	public List<Node> findNearest(byte[] hash) {
-		
+
 		byte[] distance = DHTUtils.xorDistance(DHTUtils.MAX_NODE_ID, hash);
 		BigInteger key = DHTUtils.distanceAsBigInteger(distance);
 
@@ -236,6 +268,40 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		}
 	}
 
+	private boolean nodeIsActive(LocalDHTNode localDHTNode , Node node) {
+		KrpcMessage ping = MessageFactory.createPing(node, localDHTNode.id());
+		return localDHTNode.call(ping).getValue() != null;
+	}
+	
+	/**
+	 * 定时遍历节点总表，清理坏节点
+	 */
+	class clearBadNoDes implements Runnable {
+
+		@Override
+		public void run() {
+			for (Entry<BigInteger, Node> entry : allNodes.entrySet()) {
+				try {
+					LocalDHTNode localDHTNode = localDHTNodes.get(entry.getValue().localDHTID());
+					if (null != localDHTNode) {
+						//
+						if(!nodeIsActive(localDHTNode , entry.getValue())) {
+							allNodes.remove(entry.getKey());
+							allnodesKeyMap.remove(entry.getKey());
+						}
+						else {
+							//控制ping发包频率
+							Thread.sleep(100);
+						}
+					}
+				} catch (Exception e) {
+
+				}
+			}
+		}
+
+	}
+
 	/**
 	 * 寻找peer列表任务
 	 */
@@ -256,7 +322,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 			//
 			List<Node> nodes = findNearest(torrentHash);
 
-			if(null == nodes) {
+			if (null == nodes) {
 				return;
 			}
 			findPeersHash.put(DHTUtils.byteArrayToHexString(torrentHash), empty);
@@ -264,13 +330,13 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 
 				HashSet<String> findNodeIpPort = new HashSet<String>();
 				HashMap<String, Node> findNodes = new HashMap<String, Node>();
-				
+
 				nodes.forEach(e -> {
 					findNodes.put(e.ip() + e.port(), e);
 				});
 				HashMap<String, Node> findPeers = new HashMap<String, Node>();
 				int findLevel = 3;
-				//如果查询到node,且查询到Peer小于3，循环查找
+				// 如果查询到node,且查询到Peer小于3，循环查找
 				while (findNodes.size() > 0 && findPeers.size() < 3) {
 
 					List<Node> taskList = new ArrayList<Node>();
@@ -283,14 +349,14 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 							taskList.add(node.getValue());
 						}
 					}
-					//清空任务表
+					// 清空任务表
 					findNodes.clear();
 					// 执行任务
 					taskList.forEach(task -> {
 						getPerrs(task.ip(), task.port(), torrentHash, dhtNode, findNodes, findPeers);
 					});
 
-					//控制查询循环次数
+					// 控制查询循环次数
 					findLevel--;
 					if (findLevel == 0) {
 						break;
@@ -331,7 +397,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 				if (defaultResponse.r().getMap().containsKey(KeyWord.NODES)) {
 					byte[] bs = defaultResponse.r().getMap().get(KeyWord.NODES).getBytes();
 
-					List<Node> nodes = DHTUtils.readNodeInfo(bs);
+					List<Node> nodes = DHTUtils.readNodeInfo(bs, localDHTNode);
 					//
 					nodes.forEach(info -> {
 						findNodes.put(info.ip() + info.port(), info);
@@ -364,7 +430,8 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 			byte[] port = new byte[2];
 			buffer.readBytes(ip);
 			buffer.readBytes(port);
-			return new DefaultNodeInfo(null, ip, port);
+
+			return new PeerInfo(ip, port);
 		}
 
 	}
@@ -377,13 +444,20 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		state = true;
 
 		findPeersQueue = new LinkedBlockingQueue<Runnable>();
-		tryFindPeerExe_findpeers1 = new ThreadPoolExecutor(16, 16, 0L, TimeUnit.MILLISECONDS, findPeersQueue);
+		tryFindPeerExe_findpeers1 = new ThreadPoolExecutor(8, 8, 0L, TimeUnit.MILLISECONDS, findPeersQueue);
 
-		tryFindPeerExe_announce_peer = Executors.newCachedThreadPool();
-		downloadTorrentExe = Executors.newCachedThreadPool();
+		tryFindPeerExe_announce_peer = Executors.newFixedThreadPool(16);
+		downloadTorrentExe = Executors.newFixedThreadPool(64);
 		findPeersHash = new ConcurrentHashMap<String, Object>();
 		downloadTorrentIPHash = new ConcurrentHashMap<String, Object>();
 		allNodes = new ConcurrentSkipListMap<BigInteger, Node>(new NodeComParator());
+		allnodesKeyMap = new ConcurrentHashMap<BigInteger, Object>();
+		//
+		scheduledExecutor = Executors.newScheduledThreadPool(1);
+		scheduledExecutor.scheduleAtFixedRate(new clearBadNoDes(), 1000, 5000, TimeUnit.MILLISECONDS);
+		
+		addCheckIsBadNode = Executors.newFixedThreadPool(16);
+		
 		log.info("Bt下载模块启动");
 	}
 
@@ -394,12 +468,15 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		}
 		state = false;
 
-		tryFindPeerExe_findpeers1.shutdown();
-		tryFindPeerExe_announce_peer.shutdown();
-		downloadTorrentExe.shutdown();
+		tryFindPeerExe_findpeers1.shutdownNow();
+		tryFindPeerExe_announce_peer.shutdownNow();
+		downloadTorrentExe.shutdownNow();
 		findPeersHash.clear();
 		allNodes.clear();
+		allnodesKeyMap.clear();
 		downloadTorrentIPHash.clear();
+		scheduledExecutor.shutdownNow();
+		addCheckIsBadNode.shutdownNow();
 		log.info("Bt下载模块关闭");
 	}
 
