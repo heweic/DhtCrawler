@@ -34,7 +34,11 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
 /**
  * @author hew 使用BEP09扩展协议，创建与peer TCP连接 根据协议内容，发送握手包，协商，分块请求种子元数据
+ *         <p>
+ *         非重用NioEventLoopGroup实现
+ *         <P> 存在内存泄漏
  */
+@Deprecated
 public class Bep09MetadataFiles {
 
 	private static Log log = LogFactory.getLog(Bep09MetadataFiles.class);
@@ -80,12 +84,14 @@ public class Bep09MetadataFiles {
 	 */
 	private volatile AtomicBoolean isHandShack = new AtomicBoolean(true);
 	private CountDownLatch isDownload = new CountDownLatch(1);
+
+	private Bootstrap bootstrap;
 	private NioEventLoopGroup group;
 	private Channel clientChannel;
 
 	private static int CONNECT_TIMEOUT_MILLIS = 2000;
-	private static int HANDSHACK_TIME_OUT = CONNECT_TIMEOUT_MILLIS + 1000;
-	private static int DOWNLOAD_TIME_OUT = CONNECT_TIMEOUT_MILLIS + 7000;
+
+	private static int DOWNLOAD_TIME_OUT = CONNECT_TIMEOUT_MILLIS + 8000;
 	private static int SO_RCVBUF = 1024 * 500;
 
 	private void logMes(String mes) {
@@ -94,16 +100,7 @@ public class Bep09MetadataFiles {
 	}
 
 	public void get() {
-		
-		try {
-			isDownload.await(HANDSHACK_TIME_OUT, TimeUnit.MILLISECONDS);
-		} catch (InterruptedException e) {
 
-		}
-		// 如果等待3秒后还在等待握手完成
-		if (isHandShack.get()) {
-			close();
-		}
 		//
 		try {
 			isDownload.await(DOWNLOAD_TIME_OUT, TimeUnit.MILLISECONDS);
@@ -113,16 +110,17 @@ public class Bep09MetadataFiles {
 		//
 	}
 
-	private void close() {
+	private void close(ByteBuf byteBuf) {
+		if (byteBuf != null) {
+			byteBuf.release();
+		}
 		//
 		isDownload.countDown();
 		//
 		if (null != clientChannel) {
 			clientChannel.close();
 		}
-		if (null != group) {
-			group.shutdownGracefully();
-		}
+
 	}
 
 	public void tryDownload() {
@@ -133,9 +131,9 @@ public class Bep09MetadataFiles {
 		}
 
 		// 使用netty发起tcp连接到peer
-		group = new NioEventLoopGroup();
+		group = new NioEventLoopGroup(1);
 		try {
-			Bootstrap bootstrap = new Bootstrap();
+			bootstrap = new Bootstrap();
 
 			bootstrap.group(group).channel(NioSocketChannel.class).option(ChannelOption.SO_KEEPALIVE, true)
 					.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, CONNECT_TIMEOUT_MILLIS)
@@ -154,7 +152,7 @@ public class Bep09MetadataFiles {
 				if (future.isSuccess()) {
 					logMes("连接成功!");
 				} else {
-					close();
+					close(null);
 				}
 			});
 
@@ -163,7 +161,6 @@ public class Bep09MetadataFiles {
 
 			channelFuture.channel().closeFuture().await();
 		} catch (Exception e) {
-			// e.printStackTrace();
 			isDownload.countDown();
 		} finally {
 			group.shutdownGracefully();
@@ -187,26 +184,8 @@ public class Bep09MetadataFiles {
 
 		@Override
 		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-			close();
-		}
-
-		private void doHandShack(ByteBuf bf, ChannelHandlerContext ctx) throws Exception {
-
-			// 递归读信息
-			readInfo(bf);
-			// 如果获取到metadata_size
-			if (metadata_size > 0) {
-				isHandShack.set(false);
-				// 握手完成后替换解码器
-				ctx.pipeline().replace(this, "encoder", new LengthFieldBasedFrameDecoder(1024 * 64, 0, 4, 0, 0));
-				// 发送扩展握手协议
-				sendHandshakeMsg(ctx);
-
-				// 请求第一块数据
-				sendMetadataRequest(ctx, 0);
-			} else {
-				throw new Exception("获取metadata_size失败");
-			}
+			cause.printStackTrace();
+			close(null);
 		}
 
 		private void readInfo(ByteBuf bf) throws Exception {
@@ -257,32 +236,56 @@ public class Bep09MetadataFiles {
 
 		}
 
+		private void doHandShack(ByteBuf bf, ChannelHandlerContext ctx) throws Exception {
+
+			try {
+				// 递归读信息
+				readInfo(bf);
+				// 如果获取到metadata_size
+				if (metadata_size > 0) {
+					isHandShack.set(false);
+					// 握手完成后替换解码器
+					ctx.pipeline().replace(this, "encoder", new LengthFieldBasedFrameDecoder(1024 * 64, 0, 4, 0, 0));
+					// 发送扩展握手协议
+					sendHandshakeMsg(ctx);
+
+					// 请求第一块数据
+					sendMetadataRequest(ctx, 0);
+				}
+			} catch (Exception e) {
+				close(bf);
+			}
+		}
+
 		@Override
 		public void channelRead0(ChannelHandlerContext ctx, ByteBuf bf) throws Exception {
 
 			if (isHandShack.get()) {
-				if (waitNext) {
-					doHandShack(bf, ctx);
-				}
+				try {
+					if (waitNext) {
+						doHandShack(bf, ctx);
+					}
 
-				if (bf.readableBytes() < 68) {
-					return;
-				}
-				bf.readByte();
-				bf.readBytes(19);// 协议
-				bf.readBytes(8);// 8字节占位
-				// 请求hash
-				byte[] hashBs = new byte[20];
-				bf.readBytes(hashBs);
-				// @TODO 判断与请求哈希是否一致
-				bf.readBytes(20);// 对方peerID
+					if (bf.readableBytes() < 68) {
+						return;
+					}
+					bf.readByte();
+					bf.readBytes(19);// 协议
+					bf.readBytes(8);// 8字节占位
+					// 请求hash
+					byte[] hashBs = new byte[20];
+					bf.readBytes(hashBs);
+					// @TODO 判断与请求哈希是否一致
+					bf.readBytes(20);// 对方peerID
 
-				if (bf.readableBytes() > 5) {
-					doHandShack(bf, ctx);
-				} else {
-					// 如果未获取到metadata_size,可能会在下一个包中发送
-					waitNext = true;
-					return;
+					if (bf.readableBytes() > 5) {
+						doHandShack(bf, ctx);
+					} else {
+						// 如果未获取到metadata_size,可能会在下一个包中发送
+						waitNext = true;
+					}
+				} finally {
+
 				}
 
 			}
@@ -307,7 +310,8 @@ public class Bep09MetadataFiles {
 
 		@Override
 		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-			close();
+			cause.printStackTrace();
+			close(null);
 		}
 
 		@Override
@@ -326,6 +330,7 @@ public class Bep09MetadataFiles {
 		protected void channelRead0(ChannelHandlerContext ctx, ByteBuf bf) throws Exception {
 
 			if (!isHandShack.get()) {
+
 				// 接收分块响应数据
 				bf.readInt();
 				bf.readByte();// messageType
@@ -358,8 +363,9 @@ public class Bep09MetadataFiles {
 					//
 					logMes("下載完成!");
 					//
-					close();
+					close(bf);
 				}
+
 			}
 		}
 	}
@@ -453,6 +459,24 @@ public class Bep09MetadataFiles {
 			this.dictionary = dictionary;
 		}
 
+	}
+	
+	public static void main(String[] args) {
+		
+		// 连接到124.90.154.187：30502下载:04e2c2674506a3da872f8f3ebacb5a3a9bf12cf5---连接成功!
+		
+			String ip = "124.90.154.187"; // 目标IP
+			int port = 30502; // 目标端口
+			byte[] infoHash = DHTUtils.hexStringToByteArray("04e2c2674506a3da872f8f3ebacb5a3a9bf12cf5");
+			Bep09MetadataFiles bep09MetadataFiles = new Bep09MetadataFiles(infoHash, DHTUtils.generatePeerId(), ip, port);
+
+			try {
+				bep09MetadataFiles.tryDownload();
+			} catch (Exception e) {
+				e.printStackTrace();
+				// TODO: handle exception
+			}
+			bep09MetadataFiles.get();
 	}
 
 }
