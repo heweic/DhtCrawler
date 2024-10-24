@@ -94,7 +94,7 @@ public class DHTRoutingTable implements RoutingTable {
 
 		List<Node> list = new ArrayList<Node>();
 
-		closestBucket.entrySet().iterator().forEachRemaining(e -> {
+		closestBucket.entrySet().forEach( e ->{
 			list.add(e.getValue());
 		});
 		if (list.size() == count) {
@@ -106,13 +106,14 @@ public class DHTRoutingTable implements RoutingTable {
 		int right = bucketIndex + 1;
 		while (list.size() < count && (left >= 0 || right < buckets.size())) {
 			if (left >= 0) {
-				buckets.get(left).entrySet().iterator().forEachRemaining(e -> {
+				buckets.get(left).entrySet().forEach( e->{
 					list.add(e.getValue());
 				});
+				
 				left--;
 			}
 			if (right < buckets.size()) {
-				buckets.get(right).entrySet().iterator().forEachRemaining(e -> {
+				buckets.get(right).entrySet().forEach( e->{
 					list.add(e.getValue());
 				});
 				right++;

@@ -69,7 +69,7 @@ public class BEP09TorrentDownload {
 	private BEP09TorrentDownload() {
 
 		// @TODO 待调整
-		group = new NioEventLoopGroup();
+		group = new NioEventLoopGroup(32);
 
 		bootstrap = new Bootstrap();
 
@@ -88,7 +88,7 @@ public class BEP09TorrentDownload {
 		allChannels = new ConcurrentHashMap<SocketAddress, Channel>();
 		tasks = new ConcurrentHashMap<SocketAddress, TaskInfo>();
 		//
-		group.scheduleAtFixedRate(new checkTask(), 1000, 1000, TimeUnit.MILLISECONDS);
+		group.scheduleAtFixedRate(new checkTask(), 500, 500, TimeUnit.MILLISECONDS);
 	}
 
 	public static BEP09TorrentDownload getInstance() {
@@ -170,7 +170,7 @@ public class BEP09TorrentDownload {
 					}
 
 				} catch (Exception e) {
-					e.printStackTrace();
+					//e.printStackTrace();
 				}
 			}
 
@@ -234,19 +234,19 @@ public class BEP09TorrentDownload {
 				return;
 			}
 			TaskInfo taskInfo = tasks.get(ctx.channel().remoteAddress());
-			if (null == taskInfo) {
-				ctx.channel().close();
+			if(null == taskInfo) {
+				return;
 			}
 			// 是否已握手
 			if (!taskInfo.isReadHandShake()) {
 				if (in.readableBytes() < 68) {
 					return;
 				}
-				in.readByte();
-				in.readBytes(19);
-				in.readBytes(8);
-				in.readBytes(20); // hash
-				in.readBytes(20); // peer ID
+				in.skipBytes(1);
+				in.skipBytes(19);
+				in.skipBytes(8);
+				in.skipBytes(20); // hash
+				in.skipBytes(20); // peer ID
 				//
 				taskInfo.setReadHandShake(true);
 			}
@@ -345,7 +345,7 @@ public class BEP09TorrentDownload {
 				//
 				TaskInfo info = msg.getTaskInfo();
 				log.info("连接到" + ctx.channel().remoteAddress() + "下载:" + DHTUtils.byteArrayToHexString(info.getHash())
-						+ "---下载完成！");
+						+ "---下载完成！-channel数:" + allChannels.size());
 				SaveTorrent.getInstance().synWriteBytesToFile(DHTUtils.byteArrayToHexString(info.getHash()),
 						info.getBuf().array());
 				info.setDown(true);
@@ -361,10 +361,23 @@ public class BEP09TorrentDownload {
 
 		if (channel != null) {
 			// 移除缓存
+			TaskInfo taskInfo = tasks.get(remote);
+			if(null != taskInfo && taskInfo.getBuf() != null) {
+				taskInfo.getBuf().release();
+			}
+			if(null != taskInfo && taskInfo.getBodies() != null) {
+				taskInfo.getBodies().clear();
+			}
 			tasks.remove(channel.remoteAddress());
 			allChannels.remove(channel.remoteAddress());
 			// 关闭channel
-			channel.close();
+			if(channel.eventLoop().inEventLoop()) {
+				channel.close();
+			}else {
+				channel.eventLoop().execute(()->{
+					channel.close();
+				});
+			}
 		}
 	}
 
@@ -447,7 +460,7 @@ public class BEP09TorrentDownload {
 
 		private int id;
 
-		private List<Body> bodies = new ArrayList<BEP09TorrentDownload.Body>();
+		private volatile List<Body> bodies = new ArrayList<BEP09TorrentDownload.Body>();
 
 		public TaskInfo(byte[] hash) {
 			createTime = System.currentTimeMillis();

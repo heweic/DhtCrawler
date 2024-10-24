@@ -33,8 +33,6 @@ import org.my.pro.dhtcrawler.routingTable.PeerInfo;
 import org.my.pro.dhtcrawler.util.DHTUtils;
 
 import be.adaxisoft.bencode.BEncodedValue;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 
 /**
  * 下载torrent任务
@@ -277,9 +275,9 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 
 		@Override
 		public void run() {
-			Iterator <Entry <BigInteger, Node>> it = allNodes.entrySet().iterator();
-			
-			while(it.hasNext()) {
+			Iterator<Entry<BigInteger, Node>> it = allNodes.entrySet().iterator();
+
+			while (it.hasNext()) {
 				Entry<BigInteger, Node> entry = it.next();
 				try {
 					LocalDHTNode localDHTNode = localDHTNodes.get(entry.getValue().localDHTID());
@@ -297,7 +295,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 
 				}
 			}
-			
+
 		}
 
 	}
@@ -410,8 +408,8 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 						List<BEncodedValue> list = defaultResponse.r().getMap().get(KeyWord.VALUES).getList();
 
 						for (BEncodedValue bv : list) {
-							ByteBuf byteBuf = Unpooled.wrappedBuffer(bv.getBytes());
-							Node peer = readIpPort(byteBuf);
+
+							Node peer = readIpPort(bv.getBytes());
 							findPeers.put(peer.ip(), peer);
 						}
 
@@ -425,12 +423,12 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 
 		}
 
-		public Node readIpPort(ByteBuf buffer) {
+		public Node readIpPort(byte[] bs) {
 			byte[] ip = new byte[4];
 			byte[] port = new byte[2];
-			buffer.readBytes(ip);
-			buffer.readBytes(port);
 
+			System.arraycopy(bs, 0, ip, 0, 4);
+			System.arraycopy(bs, 4, port, 0, 2);
 			return new PeerInfo(ip, port);
 		}
 
@@ -444,10 +442,10 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		state = true;
 
 		findPeersQueue = new LinkedBlockingQueue<Runnable>();
-		tryFindPeerExe_findpeers1 = new ThreadPoolExecutor(8, 8, 0L, TimeUnit.MILLISECONDS, findPeersQueue);
+		tryFindPeerExe_findpeers1 = new ThreadPoolExecutor(16, 16, 0L, TimeUnit.MILLISECONDS, findPeersQueue);
 
-		tryFindPeerExe_announce_peer = Executors.newFixedThreadPool(12);
-		downloadTorrentExe = Executors.newFixedThreadPool(64);
+		tryFindPeerExe_announce_peer = Executors.newFixedThreadPool(6);
+		downloadTorrentExe = Executors.newFixedThreadPool(32);
 		findPeersHash = new ConcurrentHashMap<String, Object>();
 		downloadTorrentIPHash = new ConcurrentHashMap<String, Object>();
 		allNodes = new ConcurrentSkipListMap<BigInteger, Node>(new NodeComParator());
@@ -456,7 +454,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		scheduledExecutor = Executors.newScheduledThreadPool(1);
 		scheduledExecutor.scheduleAtFixedRate(new clearBadNoDes(), 1000, 5000, TimeUnit.MILLISECONDS);
 
-		addCheckIsBadNode = Executors.newFixedThreadPool(16);
+		addCheckIsBadNode = Executors.newFixedThreadPool(12);
 
 		log.info("Bt下载模块启动");
 	}

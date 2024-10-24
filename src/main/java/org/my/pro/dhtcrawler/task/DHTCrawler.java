@@ -174,7 +174,7 @@ public class DHTCrawler implements DHTTask {
 
 	class workTask implements Runnable {
 
-		private ExecutorService executorService = Executors.newFixedThreadPool(3);
+		private ExecutorService executorService = Executors.newFixedThreadPool(8);
 
 		@Override
 		public void run() {
