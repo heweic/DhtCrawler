@@ -27,8 +27,7 @@ public class CleanTimeOutFuture implements DHTTask {
 					try {
 						Thread.sleep(500);
 					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
+						Thread.currentThread().interrupt();
 					}
 					//
 					try {

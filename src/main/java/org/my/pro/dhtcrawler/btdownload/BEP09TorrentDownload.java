@@ -170,7 +170,7 @@ public class BEP09TorrentDownload {
 					}
 
 				} catch (Exception e) {
-					//e.printStackTrace();
+					// e.printStackTrace();
 				}
 			}
 
@@ -193,30 +193,28 @@ public class BEP09TorrentDownload {
 			return;
 		}
 		// 创建连接并发送握手包
-		try {
-			ChannelFuture channelFuture = bootstrap.connect(socketAddress);
-			channelFuture.addListener(future -> {
-				if (future.isSuccess()) {
-					// log.info("连接到" + future.syn + "下载:" + DHTUtils.byteArrayToHexString(hash) +
-					// "---连接成功!");
-				}
-			});
 
-			Channel channel = channelFuture.sync().channel();
-			// 发送握手包
-			ByteBuf bf = Unpooled.buffer(68);
-			bf.writeByte(19);
-			bf.writeBytes(PROTO_TYPE_BS);
-			bf.writeBytes(RESERVE);
-			bf.writeBytes(hash); // 种子哈希值
-			bf.writeBytes(DHTUtils.generatePeerId());// 随机一个本地peerID
-			channel.writeAndFlush(bf);
-			// 缓存channel及任务
-			allChannels.put(socketAddress, channel);
-			tasks.put(socketAddress, new TaskInfo(hash));
-		} catch (InterruptedException e) {
-			throw e;
-		}
+		ChannelFuture channelFuture = bootstrap.connect(socketAddress);
+		channelFuture.addListener(future -> {
+			if (future.isSuccess()) {
+				
+				Channel channel = channelFuture.sync().channel();
+				log.info("连接到" + channel.remoteAddress()+ "下载:" + DHTUtils.byteArrayToHexString(hash) +
+						 "---连接成功!");
+				// 发送握手包
+				ByteBuf bf = Unpooled.buffer(68);
+				bf.writeByte(19);
+				bf.writeBytes(PROTO_TYPE_BS);
+				bf.writeBytes(RESERVE);
+				bf.writeBytes(hash); // 种子哈希值
+				bf.writeBytes(DHTUtils.generatePeerId());// 随机一个本地peerID
+				channel.writeAndFlush(bf);
+				// 缓存channel及任务
+				allChannels.put(socketAddress, channel);
+				tasks.put(socketAddress, new TaskInfo(hash));
+			}
+		});
+
 	}
 
 	/**
@@ -234,7 +232,7 @@ public class BEP09TorrentDownload {
 				return;
 			}
 			TaskInfo taskInfo = tasks.get(ctx.channel().remoteAddress());
-			if(null == taskInfo) {
+			if (null == taskInfo) {
 				return;
 			}
 			// 是否已握手
@@ -362,19 +360,19 @@ public class BEP09TorrentDownload {
 		if (channel != null) {
 			// 移除缓存
 			TaskInfo taskInfo = tasks.get(remote);
-			if(null != taskInfo && taskInfo.getBuf() != null) {
+			if (null != taskInfo && taskInfo.getBuf() != null) {
 				taskInfo.getBuf().release();
 			}
-			if(null != taskInfo && taskInfo.getBodies() != null) {
+			if (null != taskInfo && taskInfo.getBodies() != null) {
 				taskInfo.getBodies().clear();
 			}
 			tasks.remove(channel.remoteAddress());
 			allChannels.remove(channel.remoteAddress());
 			// 关闭channel
-			if(channel.eventLoop().inEventLoop()) {
+			if (channel.eventLoop().inEventLoop()) {
 				channel.close();
-			}else {
-				channel.eventLoop().execute(()->{
+			} else {
+				channel.eventLoop().execute(() -> {
 					channel.close();
 				});
 			}

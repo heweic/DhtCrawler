@@ -17,15 +17,18 @@ public class KrpcMessageFuture implements Future {
 	public KrpcMessage getValue() {
 		synchronized (lock) {
 			long waitTime = TIME_OUT - (System.currentTimeMillis() - createTime);
-			while (null == response) {
-				try {
-					lock.wait(waitTime);
-				} catch (InterruptedException e) {
-				}
+			if(waitTime > 0) {
+				while (null == response) {
+					try {
+						lock.wait(waitTime);
+					} catch (InterruptedException e) {
+						break;
+					}
 
-				waitTime = TIME_OUT - (System.currentTimeMillis() - createTime);
-				if (waitTime <= 0) {
-					break;
+					waitTime = TIME_OUT - (System.currentTimeMillis() - createTime);
+					if (waitTime <= 0) {
+						break;
+					}
 				}
 			}
 		}
