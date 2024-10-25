@@ -37,9 +37,9 @@ public class DefaultResponseHandler extends ResponseMessageHandler {
 					byte[] bs = defaultResponse.r().getMap().get(KeyWord.NODES).getBytes();
 
 					List<Node> nodes = DHTUtils.readNodeInfo(bs , localNode);
-					nodes.forEach(info -> {
-						localNode.add(info);
-					});
+					for(int i = 0 ; i < nodes.size() ; i ++) {
+						localNode.add(nodes.get(i));
+					}
 
 				}
 			} catch (Exception e) {

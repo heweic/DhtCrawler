@@ -69,11 +69,12 @@ public class DHTRoutingTable implements RoutingTable {
 		ConcurrentSkipListMap<BigInteger, Node> bucket = buckets.get(bucketIndex);
 		bucket.put(node.nodeId().intId(), node);
 		//
-		TryFindPeerAndDownload.getInstance().addNode(node);
-		//
 		if (bucket.size() > bucketValueSize) {
 			bucket.remove(bucket.firstKey());
 		}
+		//
+		TryFindPeerAndDownload.getInstance().addNode(node);
+		//
 
 	}
 

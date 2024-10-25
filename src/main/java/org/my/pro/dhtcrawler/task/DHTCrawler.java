@@ -157,11 +157,9 @@ public class DHTCrawler implements DHTTask {
 
 						List<Node> nodes = DHTUtils.readNodeInfo(bs, dhtNode);
 						//
-
-						nodes.forEach(findNode -> {
-							rs.put(findNode.ip() + findNode.port(), findNode);
-
-						});
+						for(int i = 0 ; i < nodes.size() ; i ++ ) {
+							rs.put(nodes.get(i).ip() + nodes.get(i).port(), nodes.get(i));
+						}
 
 					}
 				}
@@ -221,10 +219,12 @@ public class DHTCrawler implements DHTTask {
 							taskList.forEach(e -> {
 								futures.add(executorService.submit(new findPeerTask(e, targetNode, rs)));
 							});
+							taskList.clear();
 							// 等待所有任务执行完成
 							for (int i = 0; i < futures.size(); i++) {
 								futures.get(i).get();
 							}
+							futures.clear();
 							//
 							Thread.sleep(500);
 

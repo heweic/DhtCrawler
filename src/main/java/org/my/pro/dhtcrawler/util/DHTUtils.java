@@ -8,7 +8,6 @@ import org.apache.commons.rng.UniformRandomProvider;
 import org.apache.commons.rng.simple.RandomSource;
 import org.my.pro.dhtcrawler.LocalDHTNode;
 import org.my.pro.dhtcrawler.Node;
-import org.my.pro.dhtcrawler.NodeId;
 import org.my.pro.dhtcrawler.routingTable.DefaultNodeInfo;
 import org.my.pro.dhtcrawler.routingTable.DhtNodeID;
 
@@ -26,7 +25,7 @@ public class DHTUtils {
 	 * @param bs
 	 * @return
 	 */
-	public static List<Node> readNodeInfo(byte[] bs , LocalDHTNode localDHTID) {
+	public static List<Node> readNodeInfo(byte[] bs, LocalDHTNode localDHTID) {
 
 		List<Node> nodes = new ArrayList<Node>(bs.length / 26);
 
@@ -38,8 +37,7 @@ public class DHTUtils {
 			byte[] port = new byte[2];
 			System.arraycopy(bs, 26 * i + 20 + 4, port, 0, 2);
 
-			NodeId nodeId = new DhtNodeID(id);
-			Node info = new DefaultNodeInfo(nodeId, ip, port , localDHTID.noChangeId());
+			Node info = new DefaultNodeInfo(new DhtNodeID(id), ip, port, localDHTID.noChangeId());
 
 			nodes.add(info);
 		}
