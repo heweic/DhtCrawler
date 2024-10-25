@@ -150,11 +150,21 @@ public class BEP09TorrentDownload {
 						}
 						if (canDownload) {
 							Channel channel = allChannels.get(entry.getKey());
+							if (null != channel) {
+								channel.eventLoop().execute(new Runnable() {
 
-							// 扩展握手
-							sendHandshakeMsg(channel, taskInfo.getMetadata_size());
-							// 请求第一块数据
-							sendMetadataRequest(channel, 0, entry.getValue().getUt_metadata());
+									@Override
+									public void run() {
+										try {
+											// 扩展握手
+											sendHandshakeMsg(channel, taskInfo.getMetadata_size());
+											// 请求第一块数据
+											sendMetadataRequest(channel, 0, entry.getValue().getUt_metadata());
+										} catch (Exception e) {
+										}
+									}
+								});
+							}
 							// 标记已开始下载
 							taskInfo.setStartDownload(true);
 						}
@@ -353,24 +363,24 @@ public class BEP09TorrentDownload {
 		Channel channel = allChannels.get(remote);
 
 		if (channel != null) {
-			// 移除缓存
-			TaskInfo taskInfo = tasks.get(remote);
-			if (null != taskInfo && taskInfo.getBuf() != null) {
-				taskInfo.getBuf().release();
-			}
-			if (null != taskInfo && taskInfo.getBodies() != null) {
-				taskInfo.getBodies().clear();
-			}
-			tasks.remove(channel.remoteAddress());
-			allChannels.remove(channel.remoteAddress());
-			// 关闭channel
-			if (channel.eventLoop().inEventLoop()) {
-				channel.close();
-			} else {
-				channel.eventLoop().execute(() -> {
+			channel.eventLoop().execute(new Runnable() {
+
+				@Override
+				public void run() {
+					// 移除缓存
+					TaskInfo taskInfo = tasks.get(remote);
+					if (null != taskInfo && taskInfo.getBuf() != null) {
+						taskInfo.getBuf().release();
+					}
+					if (null != taskInfo && taskInfo.getBodies() != null) {
+						taskInfo.getBodies().clear();
+					}
+					tasks.remove(channel.remoteAddress());
+					allChannels.remove(channel.remoteAddress());
+					// 关闭channel
 					channel.close();
-				});
-			}
+				}
+			});
 		}
 	}
 
