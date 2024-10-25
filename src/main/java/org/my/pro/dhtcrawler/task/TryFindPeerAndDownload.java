@@ -67,7 +67,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 	// 节点总表
 	private ConcurrentSkipListMap<BigInteger, Node> allNodes;
 	private ConcurrentHashMap<BigInteger, Object> allnodesKeyMap;
-	// 节点总表清理坏节点任务
+	// 定时任务
 	private ScheduledExecutorService scheduledExecutor;
 	// 节点入表时，检查其是否是坏节点
 	private ExecutorService addCheckIsBadNode;
@@ -115,10 +115,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		if (!state) {
 			return;
 		}
-		// 去重缓存1024个亲求为一轮判断
-		if (findPeersHash.size() > 1024) {
-			findPeersHash.clear();
-		}
+
 		// 如果提交哈希正在执行下载,防止连续提交
 		if (findPeersHash.containsKey(DHTUtils.byteArrayToHexString(hash))) {
 			return;
@@ -142,10 +139,6 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		if (!state) {
 			return;
 		}
-		//
-		if (findPeersHash.size() > 1024) {
-			findPeersHash.clear();
-		}
 		// 如果提交哈希正在执行查找peers,防止连续提交
 		if (findPeersHash.containsKey(DHTUtils.byteArrayToHexString(hash))) {
 			return;
@@ -164,10 +157,6 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 	public void subTask(String ip, int port, byte[] hash) {
 		if (!state) {
 			return;
-		}
-		//
-		if (downloadTorrentIPHash.size() > 100) {
-			downloadTorrentIPHash.clear();
 		}
 		// 正在下载的任务防止重复提交
 		if (downloadTorrentIPHash.containsKey(ip + port)) {
@@ -199,14 +188,9 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		if (!state) {
 			return;
 		}
-		// 如果超过最大数量，删除一个节点再添加
-		if (allNodes.size() >= MAX_NODESNUM) {
-			BigInteger key = allNodes.firstKey();
-			//
-			allNodes.remove(key);
-			allnodesKeyMap.remove(key);
-		}
 		// 判断当前节点是否时是坏的,此处会提交到大量的节点
+		
+		//检查任务队列大小，限制任务数
 		if (addCheckIsBadNodeQueue.size() > 1024) {
 			return;
 		}
@@ -272,9 +256,42 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 	}
 
 	/**
+	 * 定时清理缓存
+	 */
+	class clearCache implements Runnable{
+
+		@Override
+		public void run() {
+			/**
+			 * findPeersHash
+			 * downloadTorrentIPHash
+			 * allNodes
+			 * allnodesKeyMap
+			 */
+			
+			if(findPeersHash.size() > 1024) {
+				findPeersHash.clear();
+			}
+			if(downloadTorrentIPHash.size() > 1024) {
+				downloadTorrentIPHash.clear();
+			}
+			//
+			int excess =  allNodes.size() - MAX_NODESNUM;
+			if(excess > 0) {
+				for(int i = 0 ;i < excess ; i ++ ) {
+					BigInteger key = allNodes.firstKey();
+					allNodes.remove(key);
+					allnodesKeyMap.remove(key);
+				}
+			}
+		}
+		
+	}
+
+	/**
 	 * 定时遍历节点总表，清理坏节点
 	 */
-	class clearBadNoDes implements Runnable {
+	class clearBadNodes implements Runnable {
 
 		@Override
 		public void run() {
@@ -455,9 +472,9 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		allNodes = new ConcurrentSkipListMap<BigInteger, Node>(new NodeComParator());
 		allnodesKeyMap = new ConcurrentHashMap<BigInteger, Object>();
 		//
-		scheduledExecutor = Executors.newScheduledThreadPool(1);
-		scheduledExecutor.scheduleAtFixedRate(new clearBadNoDes(), 1000, 5000, TimeUnit.MILLISECONDS);
-
+		scheduledExecutor = Executors.newScheduledThreadPool(2);
+		scheduledExecutor.scheduleAtFixedRate(new clearBadNodes(), 1000, 5000, TimeUnit.MILLISECONDS);
+		scheduledExecutor.scheduleAtFixedRate(new clearCache(), 1000, 1000, TimeUnit.MILLISECONDS);
 		addCheckIsBadNodeQueue = new LinkedBlockingQueue<Runnable>();
 		addCheckIsBadNode = new ThreadPoolExecutor(16, 16, 0L, TimeUnit.MILLISECONDS, addCheckIsBadNodeQueue);
 
