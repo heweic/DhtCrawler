@@ -61,7 +61,7 @@ public class BenDecoder extends MessageToMessageDecoder<DatagramPacket> {
 			}
 
 		} catch (Exception e) {
-			
+			return;
 		}
 	}
 

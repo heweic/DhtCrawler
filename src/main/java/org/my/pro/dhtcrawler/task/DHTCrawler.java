@@ -77,8 +77,8 @@ public class DHTCrawler implements DHTTask {
 						boolean find1 = initfindNode("router.utorrent.com", 6881, targetNode);
 						boolean find2 = initfindNode("dht.transmissionbt.com", 6881, targetNode);
 						boolean find3 = initfindNode("router.bittorrent.com", 6881, targetNode);
-						
-						//如果当前随机到的ID，未查询到节点，重新生成
+
+						// 如果当前随机到的ID，未查询到节点，重新生成
 						if (!find1 && !find2 && !find3 && dhtNode.targetSize(null) == 0) {
 							dhtNode.resetId(DHTUtils.generateNodeId());
 						}
@@ -155,7 +155,7 @@ public class DHTCrawler implements DHTTask {
 					if (defaultResponse.r().getMap().containsKey(KeyWord.NODES)) {
 						byte[] bs = defaultResponse.r().getMap().get(KeyWord.NODES).getBytes();
 
-						List<Node> nodes = DHTUtils.readNodeInfo(bs ,dhtNode);
+						List<Node> nodes = DHTUtils.readNodeInfo(bs, dhtNode);
 						//
 
 						nodes.forEach(findNode -> {
@@ -200,34 +200,34 @@ public class DHTCrawler implements DHTTask {
 							//
 							Iterator<Entry<String, Node>> it = rs.entrySet().iterator();
 							List<Node> taskList = new ArrayList<Node>();
-							//遍历待执行任务
+							// 遍历待执行任务
 							while (it.hasNext()) {
 								Entry<String, Node> entry = it.next();
 								//
 								if (findNodesIpPort.contains(entry.getKey())) {
 									continue;
 								}
-								//防止缓存过多，1024判断一轮
-								if(findNodesIpPort.size() > 1024) {
+								// 防止缓存过多，1024判断一轮
+								if (findNodesIpPort.size() > 1024) {
 									findNodesIpPort.clear();
 								}
 								findNodesIpPort.add(entry.getKey());
 								//
 								taskList.add(entry.getValue());
 							}
-							//清空待执行表
+							// 清空待执行表
 							rs.clear();
-							//提交执行
-							taskList.forEach( e->{
+							// 提交执行
+							taskList.forEach(e -> {
 								futures.add(executorService.submit(new findPeerTask(e, targetNode, rs)));
 							});
-							//等待所有任务执行完成
+							// 等待所有任务执行完成
 							for (int i = 0; i < futures.size(); i++) {
 								futures.get(i).get();
 							}
 							//
 							Thread.sleep(500);
-							
+
 						}
 					} catch (InterruptedException e) {
 						Thread.currentThread().interrupt();
@@ -257,19 +257,19 @@ public class DHTCrawler implements DHTTask {
 			while (!Thread.currentThread().isInterrupted()) {
 				//
 				if (!dhtNode.hasGetHash() && !initThread.isAlive()) {
-					//重置节点ID
+					// 重置节点ID
 					dhtNode.resetId(DHTUtils.generateNodeId());
-					//关闭工作线程
+					// 关闭工作线程
 					workThread.interrupt();
 					try {
 						workThread.join();
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
-					//重新初始化初始化线程及工作线程
+					// 重新初始化初始化线程及工作线程
 					workThread = new Thread(new workTask(), dhtNode.port() + "-dhtcrawler-workThread");
 					initThread = new Thread(new InitTask(), dhtNode.port() + "-dhtcrawler-initThread");
-					//工作线程启动
+					// 工作线程启动
 					initThread.start();
 				}
 				//
@@ -283,14 +283,14 @@ public class DHTCrawler implements DHTTask {
 
 	}
 
-	private volatile int tmp = 18;
+	private int tmp = 18;
 
 	/**
 	 * 生成下次find_node 目标ID
 	 * 
 	 * @return
 	 */
-	private synchronized byte[] closetId() {
+	private byte[] closetId() {
 		byte[] target = new byte[dhtNode.id().length];
 		// 一致的字节
 		for (int i = 0; i < tmp; i++) {
@@ -301,8 +301,8 @@ public class DHTCrawler implements DHTTask {
 		DHTUtils.nextBytes(random);
 		System.arraycopy(random, 0, target, tmp, random.length);
 		//
-		tmp--;
-		//控制随机范围
+		tmp -= 1;
+		// 控制随机范围
 		if (tmp == 14) {
 			tmp = 18;
 		}

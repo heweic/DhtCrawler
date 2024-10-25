@@ -55,9 +55,9 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 	private volatile boolean state = false;
 
 	// 防止重复提交哈希执行find_peers
-	private static ConcurrentHashMap<String, Object> findPeersHash;
+	private  ConcurrentHashMap<String, Object> findPeersHash;
 	// 防止重复提交IP加端口重复执行
-	private static ConcurrentHashMap<String, Object> downloadTorrentIPHash;
+	private  ConcurrentHashMap<String, Object> downloadTorrentIPHash;
 
 	private static final Object empty = new Object();
 

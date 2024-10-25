@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.my.pro.dhtcrawler.Node;
 import org.my.pro.dhtcrawler.RoutingTable;
+import org.my.pro.dhtcrawler.util.DHTUtils;
 
 /**
  * 节点表实现
@@ -60,14 +61,14 @@ public class SimpleRoutingTable implements RoutingTable {
 
 		List<Node> reservoir = new ArrayList<Node>();
 		//
-		Random random = new Random();
+		
 		int i = 0;
 		for (Map.Entry<String, Node> entry : nodes.entrySet()) {
 			i++;
 			if (reservoir.size() < count) {
 				reservoir.add(entry.getValue());
 			} else {
-				int j = random.nextInt(i);
+				int j = DHTUtils.rng.nextInt(i);
 				if (j < count) {
 					reservoir.set(j, entry.getValue());
 				}
