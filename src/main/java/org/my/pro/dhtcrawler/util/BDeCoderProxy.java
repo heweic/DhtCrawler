@@ -27,23 +27,14 @@ public class BDeCoderProxy {
 	}
 
 	/**
-	 *  
+	 * 
 	 * @param data
 	 * @return
 	 * @throws IOException
 	 */
 	public static BEncodedValue bdecode(ByteBuffer data) throws IOException {
-		BEncodedValue bEncodedValue;
-		ByteArrayInputStream arrayInputStream = new ByteArrayInputStream(data.array());
-		try {
-			bEncodedValue = BDecoder.decode(arrayInputStream);
-		} catch (Exception e) {
-			throw new IOException();
-		} finally {
-			IOUtils.closeQuietly(arrayInputStream);
-		}
 
-		return bEncodedValue;
+		return decode(new ByteArrayInputStream(data.array()));
 	}
 
 	/**
