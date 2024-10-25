@@ -5,8 +5,8 @@ import org.apache.http.HttpHost;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.conn.routing.HttpRoute;
 import org.my.pro.dhtcrawler.Saver;
+import org.my.pro.dhtcrawler.util.BDeCoderProxy;
 
-import be.adaxisoft.bencode.BDecoder;
 import be.adaxisoft.bencode.BEncodedValue;
 
 /**
@@ -40,7 +40,7 @@ public class ItorrentsMagnetTo extends HttpMagnetToTorrent {
 
 		try {
 
-			BEncodedValue value = BDecoder.decode(entity.getContent());
+			BEncodedValue value = BDeCoderProxy.decode(entity.getContent());
 			return new BtInfo(value, hash);
 
 		} catch (Exception e) {

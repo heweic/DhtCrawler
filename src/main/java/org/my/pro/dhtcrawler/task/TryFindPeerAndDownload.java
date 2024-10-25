@@ -473,8 +473,8 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		allnodesKeyMap = new ConcurrentHashMap<BigInteger, Object>();
 		//
 		scheduledExecutor = Executors.newScheduledThreadPool(2);
-		scheduledExecutor.scheduleAtFixedRate(new clearBadNodes(), 1000, 5000, TimeUnit.MILLISECONDS);
-		scheduledExecutor.scheduleAtFixedRate(new clearCache(), 1000, 1000, TimeUnit.MILLISECONDS);
+		scheduledExecutor.scheduleAtFixedRate(new clearBadNodes(), 1000, 1000, TimeUnit.MILLISECONDS);
+		scheduledExecutor.scheduleAtFixedRate(new clearCache(), 100, 100, TimeUnit.MILLISECONDS);
 		addCheckIsBadNodeQueue = new LinkedBlockingQueue<Runnable>();
 		addCheckIsBadNode = new ThreadPoolExecutor(16, 16, 0L, TimeUnit.MILLISECONDS, addCheckIsBadNodeQueue);
 

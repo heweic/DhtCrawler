@@ -1,16 +1,15 @@
 package org.my.pro.dhtcrawler.netty;
 
-import java.io.ByteArrayInputStream;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.util.List;
 
-import org.apache.commons.io.input.AutoCloseInputStream;
 import org.my.pro.dhtcrawler.KeyWord;
 import org.my.pro.dhtcrawler.KrpcMessage;
 import org.my.pro.dhtcrawler.message.DefaultRequest;
 import org.my.pro.dhtcrawler.message.DefaultResponse;
+import org.my.pro.dhtcrawler.util.BDeCoderProxy;
 
-import be.adaxisoft.bencode.BDecoder;
 import be.adaxisoft.bencode.BEncodedValue;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -24,14 +23,13 @@ public class BenDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
 		try {
 			ByteBuf buf = msg.content();
-			int read = buf.readableBytes();
-			byte[] bytes = new byte[read];
-			buf.readBytes(bytes);
-			
-			
-			
-			//bencode
-			BEncodedValue bv = BDecoder.decode(new AutoCloseInputStream(new ByteArrayInputStream(bytes)));
+
+			ByteBuffer byteBuffer = ByteBuffer.allocate(buf.readableBytes());
+			buf.getBytes(buf.readerIndex(), byteBuffer);
+			byteBuffer.flip();
+
+			// bencode
+			BEncodedValue bv = BDeCoderProxy.bdecode(byteBuffer);
 			String messageType = bv.getMap().get(KeyWord.Y).getString();
 			String transactionID = bv.getMap().get(KeyWord.T).getString();
 			InetSocketAddress addr = msg.sender();
@@ -46,7 +44,7 @@ public class BenDecoder extends MessageToMessageDecoder<DatagramPacket> {
 				//
 				defaultResponse.setR(bv.getMap().get(KeyWord.R));
 				//
-				out.add( defaultResponse);
+				out.add(defaultResponse);
 				break;
 			case KrpcMessage.Q:
 				DefaultRequest defaultRequest = new DefaultRequest(transactionID, addr);

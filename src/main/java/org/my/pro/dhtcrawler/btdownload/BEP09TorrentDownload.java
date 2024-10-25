@@ -1,6 +1,5 @@
 package org.my.pro.dhtcrawler.btdownload;
 
-import java.io.ByteArrayInputStream;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -13,14 +12,13 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.io.input.AutoCloseInputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.my.pro.dhtcrawler.task.SaveTorrent;
+import org.my.pro.dhtcrawler.util.BDeCoderProxy;
 import org.my.pro.dhtcrawler.util.BenCodeUtils;
 import org.my.pro.dhtcrawler.util.DHTUtils;
 
-import be.adaxisoft.bencode.BDecoder;
 import be.adaxisoft.bencode.BEncodedValue;
 import be.adaxisoft.bencode.BEncoder;
 import io.netty.bootstrap.Bootstrap;
@@ -136,8 +134,7 @@ public class BEP09TorrentDownload {
 						for (Body body : taskInfo.getBodies()) {
 							if (body.getType() == 20) {
 
-								BEncodedValue bv = BDecoder.decode(
-										new AutoCloseInputStream(new ByteArrayInputStream(body.getDictionary())));
+								BEncodedValue bv = BDeCoderProxy.bdecode(body.getDictionary());
 								taskInfo.setUt_metadata(bv.getMap().get("m").getMap().get("ut_metadata").getInt());
 								taskInfo.setMetadata_size(bv.getMap().get("metadata_size").getInt());
 								taskInfo.setBuf(Unpooled.buffer(taskInfo.getMetadata_size()));
@@ -197,10 +194,9 @@ public class BEP09TorrentDownload {
 		ChannelFuture channelFuture = bootstrap.connect(socketAddress);
 		channelFuture.addListener(future -> {
 			if (future.isSuccess()) {
-				
+
 				Channel channel = channelFuture.sync().channel();
-				log.info("连接到" + channel.remoteAddress()+ "下载:" + DHTUtils.byteArrayToHexString(hash) +
-						 "---连接成功!");
+				log.info("连接到" + channel.remoteAddress() + "下载:" + DHTUtils.byteArrayToHexString(hash) + "---连接成功!");
 				// 发送握手包
 				ByteBuf bf = Unpooled.buffer(68);
 				bf.writeByte(19);
@@ -274,8 +270,7 @@ public class BEP09TorrentDownload {
 
 						taskInfo.getBodies().add(new Body(type, dictionary));
 					} else {
-						BEncodedValue bv = BDecoder
-								.decode(new AutoCloseInputStream(new ByteArrayInputStream(dictionary)));
+						BEncodedValue bv = BDeCoderProxy.bdecode(dictionary);
 						int dataLength = BEncoder.encode(bv.getMap()).array().length;
 						byte[] rowMetaData = new byte[dictionary.length - dataLength];
 
