@@ -2,10 +2,12 @@ package org.my.pro.dhtcrawler.task;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.time.FastDateFormat;
 
 public class SaveTorrent {
 
@@ -54,7 +56,7 @@ public class SaveTorrent {
 		Object lock = lockMap.computeIfAbsent(hash, key -> new Object());
 		synchronized (lock) {
 			try {
-				FileUtils.writeByteArrayToFile(new File(saveDirectory + hash), bs, false);
+				FileUtils.writeByteArrayToFile(new File(saveDirectory + FastDateFormat.getInstance("yyyyMMdd").format(new Date()) + "/" + hash), bs, false);
 			} catch (Exception e) {
 
 			} finally {
