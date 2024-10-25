@@ -3,7 +3,6 @@ package org.my.pro.dhtcrawler.routingTable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.my.pro.dhtcrawler.Node;
@@ -61,7 +60,7 @@ public class SimpleRoutingTable implements RoutingTable {
 
 		List<Node> reservoir = new ArrayList<Node>();
 		//
-		
+
 		int i = 0;
 		for (Map.Entry<String, Node> entry : nodes.entrySet()) {
 			i++;
