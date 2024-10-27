@@ -44,10 +44,9 @@ public class SaveTorrent {
 		return instance;
 	}
 
-	public boolean exists(String hash) {
-		return new File(saveDirectory + hash).exists();
-	}
 
+
+	
 	public void synWriteBytesToFile(String hash, byte[] bs) throws Exception {
 		// 校验数据完整性
 		if (!DigestUtils.sha1Hex(bs).equals(hash)) {
@@ -56,7 +55,10 @@ public class SaveTorrent {
 		Object lock = lockMap.computeIfAbsent(hash, key -> new Object());
 		synchronized (lock) {
 			try {
-				FileUtils.writeByteArrayToFile(new File(saveDirectory + FastDateFormat.getInstance("yyyyMMdd").format(new Date()) + "/" + hash), bs, false);
+				File file = new File(saveDirectory + FastDateFormat.getInstance("yyyyMMdd").format(new Date()) + "/" + hash);
+				if(!file.exists()) {
+					FileUtils.writeByteArrayToFile(file, bs, false);
+				}
 			} catch (Exception e) {
 
 			} finally {

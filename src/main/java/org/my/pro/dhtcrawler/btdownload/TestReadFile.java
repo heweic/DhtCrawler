@@ -8,7 +8,6 @@ import org.apache.commons.io.FileUtils;
 import org.my.pro.dhtcrawler.util.BDeCoderProxy;
 import org.my.pro.dhtcrawler.util.GsonUtils;
 
-import be.adaxisoft.bencode.BDecoder;
 import be.adaxisoft.bencode.BEncodedValue;
 import be.adaxisoft.bencode.BEncoder;
 
@@ -16,7 +15,7 @@ public class TestReadFile {
 
 	public static void main(String[] args) {
 		try {
-			byte[] bs = FileUtils.readFileToByteArray(new File("D:\\21c3a7f2a06259517b02d31501ab4d4f81f32d8c"));
+			byte[] bs = FileUtils.readFileToByteArray(new File("D:\\67a547a6ef193953b339efd63268c174493943e5"));
 
 			BEncodedValue bEncodedValue = BDeCoderProxy.bdecode(ByteBuffer.wrap(bs));
 			System.out.println(BEncoder.encode(bEncodedValue.getMap()).array().length);

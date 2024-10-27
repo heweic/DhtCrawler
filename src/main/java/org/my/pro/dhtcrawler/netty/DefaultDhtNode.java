@@ -1,5 +1,6 @@
 package org.my.pro.dhtcrawler.netty;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -57,7 +58,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 	// netty相关
 	private EventLoopGroup group;
 	private Bootstrap bootstrap;
-	private ChannelFuture channelFuture;
+	private Channel channel;
 
 	// netty运行线程
 	private Thread nodeThread;
@@ -149,18 +150,37 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 	@Override
 	public void sendMessage(KrpcMessage krpcMessage) {
-		channelFuture.channel().writeAndFlush(krpcMessage);
+
+		channel.eventLoop().execute(() -> channel.writeAndFlush(krpcMessage));
 	}
 
 	@Override
 	public Future call(KrpcMessage krpcMessage) {
-		channelFuture.channel().writeAndFlush(krpcMessage);
-		Future future = new KrpcMessageFuture();
+		//
+		channel.eventLoop().execute(() -> channel.writeAndFlush(krpcMessage));
 
+		Future future = new KrpcMessageFuture();
 		futures.put(krpcMessage.t(), future);
 
 		return future;
 
+	}
+
+	@Override
+	public List<Future> invokeAll(List<KrpcMessage> krpcMessages) {
+		List<Future> futures = new ArrayList<Future>();
+
+		//
+		for (KrpcMessage krpcMessage : krpcMessages) {
+			futures.add(call(krpcMessage));
+		}
+
+		//阻塞
+		for (Future future : futures) {
+			future.getValue();
+		}
+
+		return futures;
 	}
 
 	@Override
@@ -180,7 +200,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 	@Override
 	public Channel channel() {
-		return channelFuture.channel();
+		return channel;
 	}
 
 	@Override
@@ -188,16 +208,14 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 		long currentTime = System.currentTimeMillis();
 
-		Iterator<Entry <String, Future>> it = futures.entrySet().iterator();
-		while(it.hasNext()) {
+		Iterator<Entry<String, Future>> it = futures.entrySet().iterator();
+		while (it.hasNext()) {
 			Map.Entry<String, Future> entry = it.next();
 			KrpcMessageFuture future = (KrpcMessageFuture) entry.getValue();
 			if (future.getCreateTime() + KrpcMessageFuture.LIVE_TIME < currentTime) {
 				it.remove();
 			}
 		}
-		
-		
 
 	}
 
@@ -216,7 +234,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 		public void handler(byte[] hash, KrpcMessage message) {
 			hashTime = System.currentTimeMillis();
 			writeHashToFile(hash, KeyWord.GET_PEERS);
-			//提交下载任务
+			// 提交下载任务
 			downloadTorrent.subTask_findpeers(hash, localDHTNode);
 		}
 
@@ -294,7 +312,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 					;
 					bootstrap.handler(channelHandler);
 
-					channelFuture = bootstrap.bind(port()).sync();
+					ChannelFuture channelFuture = bootstrap.bind(port()).sync();
 
 					channelFuture.addListener(future -> {
 						if (future.isSuccess()) {
@@ -302,6 +320,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 							log.info(
 									"启动节点:" + GsonUtils.GSON.toJson(id()) + "-" + channelFuture.channel().localAddress()
 											+ "-" + DHTUtils.byteArrayToHexString(id()));
+
 						} else {
 							log.info("启动节点:" + GsonUtils.GSON.toJson(id()) + "-" + port() + "失败!");
 
@@ -309,7 +328,9 @@ public class DefaultDhtNode extends AbstractDhtNode {
 						initNettyCountDownLatch.countDown();
 					});
 
-					channelFuture.channel().closeFuture().await();
+					channel = channelFuture.channel();
+
+					channel.closeFuture().await();
 
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -343,8 +364,8 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 	@Override
 	public void stop() {
-		if (null != channelFuture.channel()) {
-			channelFuture.channel().close();
+		if (null != channel) {
+			channel.close();
 		}
 		if (null != group) {
 			group.shutdownGracefully();
@@ -367,7 +388,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 	@Override
 	public boolean isRun() {
-		return channelFuture != null && channelFuture.channel().isActive();
+		return channel != null && channel.isActive();
 	}
 
 }

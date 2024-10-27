@@ -19,6 +19,6 @@ public class Main {
 	}
 
 	public static void main(String[] args) {
-		new Main().start(3);
+		new Main().start(6);
 	}
 }

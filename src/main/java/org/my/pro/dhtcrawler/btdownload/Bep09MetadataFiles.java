@@ -36,7 +36,8 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
  * @author hew 使用BEP09扩展协议，创建与peer TCP连接 根据协议内容，发送握手包，协商，分块请求种子元数据
  *         <p>
  *         非重用NioEventLoopGroup实现
- *         <P> 存在内存泄漏
+ *         <P>
+ *         存在内存泄漏
  */
 @Deprecated
 public class Bep09MetadataFiles {
@@ -124,11 +125,6 @@ public class Bep09MetadataFiles {
 	}
 
 	public void tryDownload() {
-
-		// 如果文件已下载，不执行
-		if (SaveTorrent.getInstance().exists(DHTUtils.byteArrayToHexString(hash))) {
-			return;
-		}
 
 		// 使用netty发起tcp连接到peer
 		group = new NioEventLoopGroup(1);
@@ -460,23 +456,23 @@ public class Bep09MetadataFiles {
 		}
 
 	}
-	
-	public static void main(String[] args) {
-		
-		// 连接到124.90.154.187：30502下载:04e2c2674506a3da872f8f3ebacb5a3a9bf12cf5---连接成功!
-		
-			String ip = "124.90.154.187"; // 目标IP
-			int port = 30502; // 目标端口
-			byte[] infoHash = DHTUtils.hexStringToByteArray("04e2c2674506a3da872f8f3ebacb5a3a9bf12cf5");
-			Bep09MetadataFiles bep09MetadataFiles = new Bep09MetadataFiles(infoHash, DHTUtils.generatePeerId(), ip, port);
 
-			try {
-				bep09MetadataFiles.tryDownload();
-			} catch (Exception e) {
-				e.printStackTrace();
-				// TODO: handle exception
-			}
-			bep09MetadataFiles.get();
+	public static void main(String[] args) {
+
+		// 连接到124.90.154.187：30502下载:04e2c2674506a3da872f8f3ebacb5a3a9bf12cf5---连接成功!
+
+		String ip = "124.90.154.187"; // 目标IP
+		int port = 30502; // 目标端口
+		byte[] infoHash = DHTUtils.hexStringToByteArray("04e2c2674506a3da872f8f3ebacb5a3a9bf12cf5");
+		Bep09MetadataFiles bep09MetadataFiles = new Bep09MetadataFiles(infoHash, DHTUtils.generatePeerId(), ip, port);
+
+		try {
+			bep09MetadataFiles.tryDownload();
+		} catch (Exception e) {
+			e.printStackTrace();
+			// TODO: handle exception
+		}
+		bep09MetadataFiles.get();
 	}
 
 }

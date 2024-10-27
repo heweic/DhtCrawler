@@ -59,15 +59,15 @@ public class BEP09TorrentDownload {
 	private static int CONNECT_TIMEOUT_MILLIS = 2000;
 
 	// 所有TCP通道
-	private static ConcurrentHashMap<SocketAddress, Channel> allChannels;
+	private ConcurrentHashMap<SocketAddress, Channel> allChannels;
 
 	// 待处理任务
-	private static ConcurrentHashMap<SocketAddress, TaskInfo> tasks;
+	private ConcurrentHashMap<SocketAddress, TaskInfo> tasks;
 
 	private BEP09TorrentDownload() {
 
 		// @TODO 待调整
-		group = new NioEventLoopGroup(32);
+		group = new NioEventLoopGroup();
 
 		bootstrap = new Bootstrap();
 
@@ -86,7 +86,7 @@ public class BEP09TorrentDownload {
 		allChannels = new ConcurrentHashMap<SocketAddress, Channel>();
 		tasks = new ConcurrentHashMap<SocketAddress, TaskInfo>();
 		//
-		group.scheduleAtFixedRate(new checkTask(), 500, 500, TimeUnit.MILLISECONDS);
+		group.scheduleAtFixedRate(new checkTask(), 300, 300, TimeUnit.MILLISECONDS);
 	}
 
 	public static BEP09TorrentDownload getInstance() {
@@ -143,9 +143,11 @@ public class BEP09TorrentDownload {
 							}
 							if (body.getType() == 4) {
 								canDownload = false;
+								break;
 							}
 							if (body.getType() == 1) {
 								canDownload = false;
+								break;
 							}
 						}
 						if (canDownload) {
@@ -199,8 +201,9 @@ public class BEP09TorrentDownload {
 		if (allChannels.containsKey(socketAddress)) {
 			return;
 		}
-		// 创建连接并发送握手包
+		// 如果当前channel数大于
 
+		// 创建连接并发送握手包
 		ChannelFuture channelFuture = bootstrap.connect(socketAddress);
 		channelFuture.addListener(future -> {
 			if (future.isSuccess()) {
@@ -367,18 +370,22 @@ public class BEP09TorrentDownload {
 
 				@Override
 				public void run() {
-					// 移除缓存
-					TaskInfo taskInfo = tasks.get(remote);
-					if (null != taskInfo && taskInfo.getBuf() != null) {
-						taskInfo.getBuf().release();
-					}
-					if (null != taskInfo && taskInfo.getBodies() != null) {
-						taskInfo.getBodies().clear();
-					}
-					tasks.remove(channel.remoteAddress());
-					allChannels.remove(channel.remoteAddress());
-					// 关闭channel
-					channel.close();
+
+					channel.closeFuture().addListener(futrue -> {
+						if (futrue.isSuccess()) {
+							// 移除缓存
+							TaskInfo taskInfo = tasks.get(remote);
+							if (null != taskInfo && taskInfo.getBuf() != null) {
+								taskInfo.getBuf().release();
+							}
+							if (null != taskInfo && taskInfo.getBodies() != null) {
+								taskInfo.getBodies().clear();
+							}
+							tasks.remove(channel.remoteAddress());
+							allChannels.remove(channel.remoteAddress());
+							// 关闭channel
+						}
+					});
 				}
 			});
 		}

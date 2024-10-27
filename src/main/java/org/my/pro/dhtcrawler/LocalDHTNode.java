@@ -33,6 +33,12 @@ public interface LocalDHTNode {
 	 */
 	public Future call(KrpcMessage krpcMessage);
 	/**
+	 * 发送多条消息等待所有响应
+	 * @param krpcMessage
+	 * @return
+	 */
+	public List<Future> invokeAll(List<KrpcMessage> krpcMessages);
+	/**
 	 * 
 	 * @param krpcMessage
 	 */
