@@ -5,7 +5,7 @@
 * 磁力链格式：magnet:?xt=种子文件哈希值
 
 ```
-	我在最新版本2.2在有公网IP启动每秒收集200-300个种子哈希（包含重复哈希值）,每分钟爬取torrent文件5-10不重复
+	我在最新版本2.2在有公网IP启动28个节点，大概每分钟能爬取60+的torrent文件
 ```
 
 
@@ -13,7 +13,6 @@
 
 * 实现了DHT节点功能，包括节点路由表，及命令：ping，find_node，get_peers，announce_peer
 * 在DHT节点功能的基础上加入爬虫逻辑，负责发现更多的附近节点
-* 将find_node，get_peers请求过来的哈希值，储存到文件data/hash.txt
 * 使用BEP09协议扩展协议实现torrent文件下载功能，将爬取到的torrent文件放在torrent/文件夹
 
 ## 爬虫逻辑
