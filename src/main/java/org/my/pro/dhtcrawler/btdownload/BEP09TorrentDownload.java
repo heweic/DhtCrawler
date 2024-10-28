@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
@@ -59,10 +61,18 @@ public class BEP09TorrentDownload {
 	private static int CONNECT_TIMEOUT_MILLIS = 2000;
 
 	// 所有TCP通道
-	private ConcurrentHashMap<SocketAddress, Channel> allChannels;
+	private static ConcurrentHashMap<SocketAddress, Channel> allChannels;
 
 	// 待处理任务
-	private ConcurrentHashMap<SocketAddress, TaskInfo> tasks;
+	private static ConcurrentHashMap<SocketAddress, TaskInfo> tasks;
+
+	// 握手时间
+	private static int HANDSHAKE_TIME = 1000 * 3;
+	private static int HANDSHAKE_TIME_OUT = HANDSHAKE_TIME * 2;
+	// 下载超时时间
+	private static int DOWNLOAD_TIME_OUT = 1000 * 20;
+	// 定时任务
+	private ScheduledExecutorService scheduledExecutor;
 
 	private BEP09TorrentDownload() {
 
@@ -86,7 +96,10 @@ public class BEP09TorrentDownload {
 		allChannels = new ConcurrentHashMap<SocketAddress, Channel>();
 		tasks = new ConcurrentHashMap<SocketAddress, TaskInfo>();
 		//
-		group.scheduleAtFixedRate(new checkTask(), 300, 300, TimeUnit.MILLISECONDS);
+		scheduledExecutor = Executors.newScheduledThreadPool(2);
+		
+		scheduledExecutor.scheduleAtFixedRate(new ClearTimeOutTask(), 100, 100, TimeUnit.MILLISECONDS);
+		scheduledExecutor.scheduleAtFixedRate(new readDataAndStart(), 100, 100, TimeUnit.MILLISECONDS);
 	}
 
 	public static BEP09TorrentDownload getInstance() {
@@ -100,38 +113,23 @@ public class BEP09TorrentDownload {
 		return instance;
 	}
 
-	/**
-	 * 遍历所有任务 该关闭的关闭 该触发下载的触发下载
-	 */
-	class checkTask implements Runnable {
-		private static int HANDSHAKE_TIME = 1000 * 3;
-		private static int DOWNLOAD_TIME_OUT = 1000 * 15;
+	class readDataAndStart implements Runnable {
 
 		@Override
 		public void run() {
 
-			long currentTime = System.currentTimeMillis();
+			// 判断是否可以执行下载请求 , 如果获得到20类型且不包含4,即可以开始下载
 			Iterator<Entry<SocketAddress, TaskInfo>> it = tasks.entrySet().iterator();
 			while (it.hasNext()) {
 				Entry<SocketAddress, TaskInfo> entry = it.next();
 				TaskInfo taskInfo = entry.getValue();
+				//
 				try {
-
-					// 如果任务已经完成
-					if (taskInfo.isDown()) {
-						closeChannel(entry.getKey());
-						break;
-					}
-					long tmpTime = currentTime - taskInfo.getCreateTime();
-					// 下载限时过后无论超时与否，关闭连接
-					if (tmpTime >= DOWNLOAD_TIME_OUT) {
-						closeChannel(entry.getKey());
-					}
-
-					// 判断是否可以执行下载请求 , 如果获得到20类型且不包含4,即可以开始下载
-					if (!taskInfo.isStartDownload() && tmpTime >= HANDSHAKE_TIME) {
+					if (!taskInfo.isReadMetadata()
+							&& System.currentTimeMillis() - taskInfo.getCreateTime() >= HANDSHAKE_TIME) {
 						boolean canDownload = false;
 						for (Body body : taskInfo.getBodies()) {
+							//
 							if (body.getType() == 20) {
 
 								BEncodedValue bv = BDeCoderProxy.bdecode(body.getDictionary());
@@ -142,10 +140,6 @@ public class BEP09TorrentDownload {
 
 							}
 							if (body.getType() == 4) {
-								canDownload = false;
-								break;
-							}
-							if (body.getType() == 1) {
 								canDownload = false;
 								break;
 							}
@@ -167,13 +161,47 @@ public class BEP09TorrentDownload {
 									}
 								});
 							}
-							// 标记已开始下载
-							taskInfo.setStartDownload(true);
 						}
+
+						//
+						taskInfo.setReadMetadata(true);
+					}
+				} catch (Exception e) {
+					// TODO: handle exception
+				}
+			}
+
+		}
+
+	}
+
+	/**
+	 * 遍历所有任务 该关闭的关闭 该触发下载的触发下载
+	 */
+	class ClearTimeOutTask implements Runnable {
+
+		@Override
+		public void run() {
+
+			Iterator<Entry<SocketAddress, TaskInfo>> it = tasks.entrySet().iterator();
+			while (it.hasNext()) {
+				Entry<SocketAddress, TaskInfo> entry = it.next();
+				TaskInfo taskInfo = entry.getValue();
+				try {
+
+					// 如果任务已经完成
+					if (taskInfo.isDown()) {
+						closeChannel(entry.getKey());
+						break;
+					}
+					long tmpTime = System.currentTimeMillis() - taskInfo.getCreateTime();
+					// 下载限时过后无论超时与否，关闭连接
+					if (tmpTime >= DOWNLOAD_TIME_OUT) {
+						closeChannel(entry.getKey());
 					}
 
 					// 如果在握手超时时间过后，还未开始下载，关闭
-					if (!taskInfo.isStartDownload() && tmpTime >= HANDSHAKE_TIME) {
+					if (!taskInfo.isReadMetadata() && tmpTime >= HANDSHAKE_TIME_OUT) {
 						closeChannel(entry.getKey());
 						break;
 					}
@@ -209,7 +237,8 @@ public class BEP09TorrentDownload {
 			if (future.isSuccess()) {
 
 				Channel channel = channelFuture.sync().channel();
-				log.info("连接到" + channel.remoteAddress() + "下载:" + DHTUtils.byteArrayToHexString(hash) + "---连接成功!");
+				// log.info("连接到" + channel.remoteAddress() + "下载:" +
+				// DHTUtils.byteArrayToHexString(hash) + "---连接成功!");
 				// 发送握手包
 				ByteBuf bf = Unpooled.buffer(68);
 				bf.writeByte(19);
@@ -279,8 +308,8 @@ public class BEP09TorrentDownload {
 				byte[] dictionary = new byte[length - 2];
 				in.readBytes(dictionary);
 				try {
-					if (!taskInfo.startDownload) {
-
+					if (!taskInfo.isReadMetadata()) {
+						//
 						taskInfo.getBodies().add(new Body(type, dictionary));
 					} else {
 						BEncodedValue bv = BDeCoderProxy.bdecode(dictionary);
@@ -461,8 +490,8 @@ public class BEP09TorrentDownload {
 		private int nowPiece;
 		// 是否已读取握手响应头信息
 		private boolean readHandShake = false;
-		// 是否已开始下载torrent
-		private boolean startDownload = false;
+		// 是否已完成握手判单
+		private boolean readMetadata = false;
 		private int ut_metadata;
 		private int metadata_size;
 
@@ -470,7 +499,7 @@ public class BEP09TorrentDownload {
 
 		private int id;
 
-		private volatile List<Body> bodies = new ArrayList<BEP09TorrentDownload.Body>();
+		private List<Body> bodies = new ArrayList<BEP09TorrentDownload.Body>();
 
 		public TaskInfo(byte[] hash) {
 			createTime = System.currentTimeMillis();
@@ -506,6 +535,7 @@ public class BEP09TorrentDownload {
 		}
 
 		public void setMetadata_size(int metadata_size) {
+			log.info(DHTUtils.byteArrayToHexString(hash) + "获得metadata_size：" + metadata_size);
 			this.metadata_size = metadata_size;
 		}
 
@@ -553,12 +583,12 @@ public class BEP09TorrentDownload {
 			return buf;
 		}
 
-		public boolean isStartDownload() {
-			return startDownload;
+		public boolean isReadMetadata() {
+			return readMetadata;
 		}
 
-		public void setStartDownload(boolean startDownload) {
-			this.startDownload = startDownload;
+		public void setReadMetadata(boolean readMetadata) {
+			this.readMetadata = readMetadata;
 		}
 
 	}
