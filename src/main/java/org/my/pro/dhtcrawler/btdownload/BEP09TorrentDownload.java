@@ -191,19 +191,50 @@ public class BEP09TorrentDownload {
 
 					// 如果任务已经完成
 					if (taskInfo.isDown()) {
+						// 移除缓存
+						if (null != taskInfo && taskInfo.getBuf() != null) {
+							taskInfo.getBuf().release();
+						}
+						if (null != taskInfo && taskInfo.getBodies() != null) {
+							taskInfo.getBodies().clear();
+						}
+						it.remove();
+						//关闭channel
 						closeChannel(entry.getKey());
-						break;
+						//
+						continue;
 					}
 					long tmpTime = System.currentTimeMillis() - taskInfo.getCreateTime();
 					// 下载限时过后无论超时与否，关闭连接
 					if (tmpTime >= DOWNLOAD_TIME_OUT) {
+						//
+						if (null != taskInfo && taskInfo.getBuf() != null) {
+							taskInfo.getBuf().release();
+						}
+						if (null != taskInfo && taskInfo.getBodies() != null) {
+							taskInfo.getBodies().clear();
+						}
+						it.remove();
+						//
 						closeChannel(entry.getKey());
+						//
+						continue;
 					}
 
 					// 如果在握手超时时间过后，还未开始下载，关闭
 					if (!taskInfo.isReadMetadata() && tmpTime >= HANDSHAKE_TIME_OUT) {
+						//
+						if (null != taskInfo && taskInfo.getBuf() != null) {
+							taskInfo.getBuf().release();
+						}
+						if (null != taskInfo && taskInfo.getBodies() != null) {
+							taskInfo.getBodies().clear();
+						}
+						it.remove();
+						//
 						closeChannel(entry.getKey());
-						break;
+						//
+						continue;
 					}
 
 				} catch (Exception e) {
@@ -392,15 +423,9 @@ public class BEP09TorrentDownload {
 
 	private void closeChannel(SocketAddress remote) {
 
-		// 移除缓存
-		TaskInfo taskInfo = tasks.get(remote);
-		if (null != taskInfo && taskInfo.getBuf() != null) {
-			taskInfo.getBuf().release();
-		}
-		if (null != taskInfo && taskInfo.getBodies() != null) {
-			taskInfo.getBodies().clear();
-		}
-
+	
+		
+		
 		// 关闭channel
 		Channel channel = allChannels.get(remote);
 
@@ -412,8 +437,6 @@ public class BEP09TorrentDownload {
 
 					channel.closeFuture().addListener(futrue -> {
 						if (futrue.isSuccess()) {
-
-							tasks.remove(channel.remoteAddress());
 							allChannels.remove(channel.remoteAddress());
 							// 关闭channel
 						}
