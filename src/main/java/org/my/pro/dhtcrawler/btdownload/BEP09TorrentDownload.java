@@ -97,7 +97,7 @@ public class BEP09TorrentDownload {
 		tasks = new ConcurrentHashMap<SocketAddress, TaskInfo>();
 		//
 		scheduledExecutor = Executors.newScheduledThreadPool(2);
-		
+
 		scheduledExecutor.scheduleAtFixedRate(new ClearTimeOutTask(), 100, 100, TimeUnit.MILLISECONDS);
 		scheduledExecutor.scheduleAtFixedRate(new readDataAndStart(), 100, 100, TimeUnit.MILLISECONDS);
 	}
@@ -392,6 +392,16 @@ public class BEP09TorrentDownload {
 
 	private void closeChannel(SocketAddress remote) {
 
+		// 移除缓存
+		TaskInfo taskInfo = tasks.get(remote);
+		if (null != taskInfo && taskInfo.getBuf() != null) {
+			taskInfo.getBuf().release();
+		}
+		if (null != taskInfo && taskInfo.getBodies() != null) {
+			taskInfo.getBodies().clear();
+		}
+
+		// 关闭channel
 		Channel channel = allChannels.get(remote);
 
 		if (channel != null) {
@@ -402,14 +412,7 @@ public class BEP09TorrentDownload {
 
 					channel.closeFuture().addListener(futrue -> {
 						if (futrue.isSuccess()) {
-							// 移除缓存
-							TaskInfo taskInfo = tasks.get(remote);
-							if (null != taskInfo && taskInfo.getBuf() != null) {
-								taskInfo.getBuf().release();
-							}
-							if (null != taskInfo && taskInfo.getBodies() != null) {
-								taskInfo.getBodies().clear();
-							}
+
 							tasks.remove(channel.remoteAddress());
 							allChannels.remove(channel.remoteAddress());
 							// 关闭channel
