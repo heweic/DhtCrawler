@@ -50,6 +50,9 @@ public class DHTCrawler implements DHTTask {
 	private Thread checkHash;
 
 	private volatile boolean state = false;
+	
+	
+	//private 
 
 	public DHTCrawler(LocalDHTNode dhtNode) {
 		this.dhtNode = dhtNode;

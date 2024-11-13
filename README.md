@@ -6,7 +6,12 @@
 
 ## 简介
 * 一个使用JAVA实现的BT爬虫，它会记录收集到的种子文件哈希值，及下载torrent文件
+* 一个BT检索引擎，它会将爬取的torrent文件，解析出文件及文件大小，保存到Apache-Lucene中
+* BT搜索地址: http://localhost:/index
 * 磁力链格式：magnet:?xt=种子文件哈希值
+* 检索页面截图
+
+![检索实例图](search1.png)
 
 ```
 	我在最新版本2.2在有公网IP启动28个节点，大概每分钟能爬取60+的torrent文件

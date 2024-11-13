@@ -15,7 +15,7 @@ public class TestReadFile {
 
 	public static void main(String[] args) {
 		try {
-			byte[] bs = FileUtils.readFileToByteArray(new File("D:\\37fd9c16ad24d5e20c5a63d872e46bb56b58501d"));
+			byte[] bs = FileUtils.readFileToByteArray(new File("D:\\472f60c386425497737696cdefe0a482c8c2ae40"));
 
 			BEncodedValue bEncodedValue = BDeCoderProxy.bdecode(ByteBuffer.wrap(bs));
 			System.out.println(BEncoder.encode(bEncodedValue.getMap()).array().length);

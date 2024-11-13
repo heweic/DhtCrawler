@@ -109,7 +109,10 @@ public class DefaultDhtNode extends AbstractDhtNode {
 		return noChangeId;
 	}
 
-	private static long TIME_OUT = 1000 * 60 * 5;
+	private static long HASH_TIME_OUT = 1000 * 60 * 5;
+	private static long LIVE_TIME_OUT = 1000 * 60 * 60;
+
+	private volatile long startTime = System.currentTimeMillis();
 
 	public void writeHashToFile(byte[] hash, String code) {
 		String mes = FastDateFormat.getInstance("yyyy/MM/dd HH:mm:ss").format(new Date()) + ":"
@@ -119,8 +122,11 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 	@Override
 	public boolean hasGetHash() {
-		return System.currentTimeMillis() - hashTime < TIME_OUT;
+		//如果获取哈希未超时且存货时间未超时，返回true
+		return System.currentTimeMillis() - hashTime < HASH_TIME_OUT
+				&& (System.currentTimeMillis() - startTime) < LIVE_TIME_OUT;
 	}
+
 
 	@Override
 	public void resetId(byte[] id) {
@@ -129,6 +135,8 @@ public class DefaultDhtNode extends AbstractDhtNode {
 		routingTable.resetNodeId(id);
 		//
 		hashTime = System.currentTimeMillis();
+		//
+		startTime = System.currentTimeMillis();
 
 	}
 
@@ -175,7 +183,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 			futures.add(call(krpcMessage));
 		}
 
-		//阻塞
+		// 阻塞
 		for (Future future : futures) {
 			future.getValue();
 		}

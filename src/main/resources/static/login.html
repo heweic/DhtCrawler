@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BT Search Page</title>
+<link rel="stylesheet" href="/css/bootstrap.min.css">
+<style>
+body {
+	padding-top: 70px; /* Offset for fixed header */
+	padding-bottom: 70px; /* Offset for fixed footer */
+}
+
+.header, .footer {
+	background-color: #f8f8f8;
+	border: 1px solid #e7e7e7;
+	position: fixed;
+	width: 100%;
+	left: 0;
+	z-index: 1000;
+}
+
+.header {
+	top: 0;
+	height: 70px;
+}
+
+.footer {
+	bottom: 0;
+	height: 70px;
+	text-align: center;
+	padding: 20px 0;
+}
+
+.content {
+	margin-top: 20px;
+}
+</style>
+</head>
+<body>
+	<!-- Header -->
+	<div class="header">
+		<div class="container">
+			<h2>BT Search</h2>
+		</div>
+	</div>
+	<!-- Main Content -->
+	<div class="container content" >
+		<div class="row clearfix">
+			<div class="col-md-12 column">
+				<div class="alert alert-warning">
+				<strong>提示：</strong>验证密码后访问
+			</div>
+			</div>
+		</div>
+		<div class="row clearfix">
+			<div class="col-md-12 column">
+				<form class="form-horizontal" role="form">
+					
+					<div class="form-group">
+						 <label for="inputPassword3" class="col-sm-2 control-label">Password</label>
+						<div class="col-sm-10">
+							<input id="ipt_pass" type="password" class="form-control" id="password" />
+						</div>
+					</div>
+					<div class="form-group">
+						<div class="col-sm-offset-2 col-sm-10">
+							 <button id="btn_login" type="button" class="btn btn-primary">提交</button>
+						</div>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+
+	<!-- Footer -->
+	<div class="footer">
+		<div class="container">
+			<p>BT Search &copy; 2024 </p>
+		</div>
+	</div>
+
+	<script
+		src="/js/jquery-3.7.1.min.js"></script>
+	<script
+		src="/js/bootstrap.min.js"></script>
+	<script>
+	var doLogin = function(){
+		var params = {
+				pass:$("#ipt_pass").val()
+		};
+		$.post("/api/auth" , params , function(res){
+			if(res.code == 200 && res.data){
+				//jump
+				window.location.href ="/index";
+			}else{
+				alert("密码错误!");
+			}
+		},"json");
+	}
+	
+	$(document).ready(function(){
+	
+		$("#ipt_pass").on("keydown",function(event){
+			if(event.key == "Enter"){
+				doLogin();
+			}
+		});
+		
+		$("#btn_login").click(function(){
+			doLogin();
+		});
+	});
+	</script>
+</body>
+</html>

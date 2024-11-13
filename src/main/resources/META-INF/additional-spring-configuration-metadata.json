@@ -1,14 +1,17 @@
-{
-	"properties": [
-		{
-			"name": "dht.num",
-			"type": "java.lang.String",
-			"description": "DHT节点数量"
-		},
-		{
-			"name": "dht.port",
-			"type": "java.lang.String",
-			"description": "起始端口"
-		}
-	]
-}
+{"properties": [
+  {
+    "name": "dht.num",
+    "type": "java.lang.String",
+    "description": "DHT节点数量"
+  },
+  {
+    "name": "dht.port",
+    "type": "java.lang.String",
+    "description": "起始端口"
+  },
+  {
+    "name": "dht.enabled",
+    "type": "java.lang.Boolean",
+    "description": "是否启动DHT"
+  }
+]}

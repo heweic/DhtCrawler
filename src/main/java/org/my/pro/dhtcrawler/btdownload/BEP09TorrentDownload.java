@@ -36,6 +36,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.util.AttributeKey;
 
 /**
  * BEP09 torrent下载,单例
@@ -64,7 +65,7 @@ public class BEP09TorrentDownload {
 	private static ConcurrentHashMap<SocketAddress, Channel> allChannels;
 
 	// 待处理任务
-	private static ConcurrentHashMap<SocketAddress, TaskInfo> tasks;
+	private static final AttributeKey<TaskInfo> _TASKINFO = AttributeKey.valueOf("_TASK_INFO");
 
 	// 握手时间
 	private static int HANDSHAKE_TIME = 1000 * 3;
@@ -94,7 +95,6 @@ public class BEP09TorrentDownload {
 					}
 				});
 		allChannels = new ConcurrentHashMap<SocketAddress, Channel>();
-		tasks = new ConcurrentHashMap<SocketAddress, TaskInfo>();
 		//
 		scheduledExecutor = Executors.newScheduledThreadPool(2);
 
@@ -119,10 +119,11 @@ public class BEP09TorrentDownload {
 		public void run() {
 
 			// 判断是否可以执行下载请求 , 如果获得到20类型且不包含4,即可以开始下载
-			Iterator<Entry<SocketAddress, TaskInfo>> it = tasks.entrySet().iterator();
+			Iterator<Entry<SocketAddress, Channel>> it = allChannels.entrySet().iterator();
 			while (it.hasNext()) {
-				Entry<SocketAddress, TaskInfo> entry = it.next();
-				TaskInfo taskInfo = entry.getValue();
+				Entry<SocketAddress, Channel> entry = it.next();
+				Channel channel = entry.getValue();
+				TaskInfo taskInfo = channel.attr(_TASKINFO).get();
 				//
 				try {
 					if (!taskInfo.isReadMetadata()
@@ -145,7 +146,6 @@ public class BEP09TorrentDownload {
 							}
 						}
 						if (canDownload) {
-							Channel channel = allChannels.get(entry.getKey());
 							if (null != channel) {
 								channel.eventLoop().execute(new Runnable() {
 
@@ -155,7 +155,7 @@ public class BEP09TorrentDownload {
 											// 扩展握手
 											sendHandshakeMsg(channel, taskInfo.getMetadata_size());
 											// 请求第一块数据
-											sendMetadataRequest(channel, 0, entry.getValue().getUt_metadata());
+											sendMetadataRequest(channel, 0, taskInfo.getUt_metadata());
 										} catch (Exception e) {
 										}
 									}
@@ -183,10 +183,11 @@ public class BEP09TorrentDownload {
 		@Override
 		public void run() {
 
-			Iterator<Entry<SocketAddress, TaskInfo>> it = tasks.entrySet().iterator();
+			Iterator<Entry<SocketAddress, Channel>> it = allChannels.entrySet().iterator();
 			while (it.hasNext()) {
-				Entry<SocketAddress, TaskInfo> entry = it.next();
-				TaskInfo taskInfo = entry.getValue();
+				Entry<SocketAddress, Channel> entry = it.next();
+				Channel channel = entry.getValue();
+				TaskInfo taskInfo = channel.attr(_TASKINFO).get();
 				try {
 
 					// 如果任务已经完成
@@ -198,9 +199,8 @@ public class BEP09TorrentDownload {
 						if (null != taskInfo && taskInfo.getBodies() != null) {
 							taskInfo.getBodies().clear();
 						}
-						it.remove();
-						//关闭channel
-						closeChannel(entry.getKey());
+						// 关闭channel
+						closeChannel(channel);
 						//
 						continue;
 					}
@@ -214,9 +214,8 @@ public class BEP09TorrentDownload {
 						if (null != taskInfo && taskInfo.getBodies() != null) {
 							taskInfo.getBodies().clear();
 						}
-						it.remove();
 						//
-						closeChannel(entry.getKey());
+						closeChannel(channel);
 						//
 						continue;
 					}
@@ -230,9 +229,8 @@ public class BEP09TorrentDownload {
 						if (null != taskInfo && taskInfo.getBodies() != null) {
 							taskInfo.getBodies().clear();
 						}
-						it.remove();
 						//
-						closeChannel(entry.getKey());
+						closeChannel(channel);
 						//
 						continue;
 					}
@@ -280,7 +278,8 @@ public class BEP09TorrentDownload {
 				channel.writeAndFlush(bf);
 				// 缓存channel及任务
 				allChannels.put(socketAddress, channel);
-				tasks.put(socketAddress, new TaskInfo(hash));
+				channel.attr(_TASKINFO).set(new TaskInfo(hash));
+
 			}
 		});
 
@@ -300,7 +299,7 @@ public class BEP09TorrentDownload {
 			if (in.readableBytes() < 5) {
 				return;
 			}
-			TaskInfo taskInfo = tasks.get(ctx.channel().remoteAddress());
+			TaskInfo taskInfo = ctx.channel().attr(_TASKINFO).get();
 			if (null == taskInfo) {
 				return;
 			}
@@ -421,14 +420,7 @@ public class BEP09TorrentDownload {
 
 	}
 
-	private void closeChannel(SocketAddress remote) {
-
-	
-		
-		
-		// 关闭channel
-		Channel channel = allChannels.get(remote);
-
+	private void closeChannel(Channel channel) {
 		if (channel != null) {
 			channel.eventLoop().execute(new Runnable() {
 
@@ -561,7 +553,6 @@ public class BEP09TorrentDownload {
 		}
 
 		public void setMetadata_size(int metadata_size) {
-			log.info(DHTUtils.byteArrayToHexString(hash) + "获得metadata_size：" + metadata_size);
 			this.metadata_size = metadata_size;
 		}
 

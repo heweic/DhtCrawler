@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BT Search Page</title>
+<link rel="stylesheet" href="/css/bootstrap.min.css">
+<style>
+body {
+	padding-top: 70px; /* Offset for fixed header */
+	padding-bottom: 70px; /* Offset for fixed footer */
+}
+
+.header, .footer {
+	background-color: #f8f8f8;
+	border: 1px solid #e7e7e7;
+	position: fixed;
+	width: 100%;
+	left: 0;
+	z-index: 1000;
+}
+
+.header {
+	top: 0;
+	height: 70px;
+}
+
+.footer {
+	bottom: 0;
+	height: 70px;
+	text-align: center;
+	padding: 20px 0;
+}
+
+.content {
+	margin-top: 20px;
+}
+p {
+	margin: 0 0 0;
+}
+.custom-babel{
+	padding: 0;
+	font-size: inherit;
+	border: none;
+	background-color: #f0ad4e;
+}
+.btinfo:hover{
+	cursor:pointer;
+}
+</style>
+</head>
+<body>
+	<!-- Header -->
+	<div class="header">
+		<div class="container">
+			<h2>BT Search</h2>
+		</div>
+	</div>
+	<!-- Main Content -->
+	<div class="container content">
+		<div class="row">
+			<div class="col-md-6">
+				<div class="input-group">
+					<input type="text" id="ipt_search" class="form-control" placeholder="输入关键字搜索磁力链...">
+					<span class="input-group-btn">
+						<button class="btn btn-default" type="button" id="btn_search">
+							<i class="glyphicon glyphicon-search"></i>
+						</button>
+					</span>
+				</div>
+			</div>
+		</div>
+		<!-- Query Time -->
+		<div class="query-time" style="margin-top: 5px;">
+			<p id="queryTime">
+				搜索到约0条记录耗时:0ms
+			</p>
+		</div>
+		<!-- BT Information List -->
+		<div class="row " id="div_btshow">
+		</div>
+
+		<!-- Pagination -->
+		<nav aria-label="Page navigation" id="nav_page" style="display:none;">
+			<ul class="pagination" id="pagination">
+				<li><a href="javascript:upperPage();"> &lt;- 上一页</a></li>
+				<li><a href="javascript:nextPage();">下一页 -&gt;</a></li>
+			</ul>
+		</nav>
+	</div>
+
+	<!-- Footer -->
+	<div class="footer">
+		<div class="container">
+			<p id="p_showNum">BT Search &copy; 2024</p>
+		</div>
+	</div>
+
+	<script src="/js/jquery-3.7.1.min.js"></script>
+	<script src="/js/bootstrap.min.js"></script>
+	<script>
+		var btInfos;
+		const pageNow = {
+				num:1
+		};
+		var nextPage = function(){
+			pageNow.num += 1;
+			doSearch($("#ipt_search").val() , pageNow.num);
+		}
+		var upperPage = function(){
+			pageNow.num -= 1;
+			if(pageNow.num < 1){
+				pageNow.num = 1 ;
+				return;
+			}
+			doSearch($("#ipt_search").val() , pageNow.num);
+		}
+		var doSearch = function(ss,page){
+			var params = {
+				page:page,
+				search:ss
+			};
+			$.get("/api/search" , params , function(res){
+				if(res.code == 200){
+					$("#queryTime").text(
+							"第"+ page +"页查询到约" + res.data.count +"条记录耗时" + res.data.timeUse +"ms");
+					//
+					var data = res.data;
+					//
+					if(data.count == 0){
+						pageNow.num = 1;
+						$("#div_btshow").html('');
+						//
+						return;
+					}
+					//
+					pageNow.num = data.page;
+					btInfos = data.btInfos;
+					if(btInfos.length < 10){
+						$("#nav_page").hide();
+					}else{
+						$("#nav_page").show();
+					}
+					showBtInfos();
+				}
+			},"json");
+		}
+		var showBtDetail = function(btInfo){
+			
+		}
+		//
+		
+		//
+		var showBtInfo = function(btInfo){
+			var content = $("#div_btshow").html();
+			var html;
+			//
+			html = '<div class="col-md-12 column btinfo"><blockquote><p>'+ btInfo.name;
+			
+			html +='</p><span class="label label-default" style="font-size:10px;">日期' + btInfo.time;
+			html +='</span> <span class="label label-default" style="font-size:10px;">大小' + btInfo.size;
+			html +='</span> <span class="label label-default" style="font-size:10px;">文件' + btInfo.fileNum;
+			html +='</span>'
+				html += '<p>magnet:?xt=urn:btih:'+ btInfo.hash +'</p>';
+			var showNum = 0;
+			$.each(btInfo.files , function(index,item){
+				if(showNum >= 20){
+					return;
+				}
+				if(item.length > 1024 * 1024 * 10){
+					html += '<small>'+ item.path +'</small>';
+					showNum++;
+				}
+				
+			});
+			if(btInfo.files.length > 5){
+				html +='<span>......</span>';
+			}
+			//
+			content += html;
+			$("#div_btshow").html(content)
+		}
+		//
+		var showBtInfos = function(){
+			
+			$("#div_btshow").html('');
+			
+			$.each(btInfos , function(index,btInfo){
+				showBtInfo(btInfo);
+			});
+		}
+		$(document).ready(function(){
+			$("#ipt_search").on("keydown",function(event){
+				if(event.key == "Enter"){
+					doSearch($(this).val(),1);
+				}
+			});
+			$("#btn_search").click(function(){
+				doSearch($("#ipt_search").val(),1);
+			});
+			//
+			$.get("/api/isLogin" , {} , function(res){
+				if(res.code != 200 || !res.data){
+					window.location.href ="/login";
+				}
+			},"json");
+			
+			$.get("/api/count" , {} , function(res){
+				if(res.code == 200 ){
+					var count = res.data;
+					$("#p_showNum").html('BT Search &copy; ' + count);
+				}
+			},"json");
+		});
+	</script>
+</body>
+</html>

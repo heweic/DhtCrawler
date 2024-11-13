@@ -1,15 +1,22 @@
 package org.my.pro.dhtcrawler.btdownload;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.time.FastDateFormat;
 import org.my.pro.dhtcrawler.util.BtUtils;
 import org.my.pro.dhtcrawler.util.GsonUtils;
 
 import be.adaxisoft.bencode.BEncodedValue;
 
 public class BtInfo {
+	/**
+	 * hash
+	 * 
+	 */
+	private String hash;
 
 	/**
 	 * 文件名
@@ -17,32 +24,23 @@ public class BtInfo {
 	private String name;
 
 	/**
-	 * 大小 eg: 12.58M / 470.00 Byte
+	 * 获得时间
 	 */
-	private String size;
+	private String time;
 
 	/** */
 	private long length;
-
-	/**
-	 * hash
-	 */
-	private String hash;
-
-	/**
-	 * 磁力连接
-	 */
-	private String magnet;
-
-	/**
-	 * 文件数量
-	 */
-	private int fileNum;
-
 	/**
 	 * 文件列表
 	 */
 	private List<BtFileInfo> files = new ArrayList<>();
+
+	/**
+	 * 大小 eg: 12.58M / 470.00 Byte
+	 */
+	private String size;
+
+	private int fileNum;
 
 	public BtInfo() {
 	}
@@ -54,6 +52,7 @@ public class BtInfo {
 
 			Map<String, BEncodedValue> info = value.getMap();
 
+			// 解析name
 			name = null;
 			if (info.containsKey("name.utf-8")) {
 				name = info.get("name.utf-8").getString();
@@ -61,6 +60,7 @@ public class BtInfo {
 				name = info.get("name").getString();
 			}
 
+			// 解析files
 			if (info.containsKey("files")) {
 				//
 
@@ -74,12 +74,11 @@ public class BtInfo {
 				}
 				this.length = length;
 				this.size = BtUtils.lengthStr(length);
-				fileNum = files.size();
+
 			} else {
 
 				length = info.get("length").getLong();
 				size = BtUtils.lengthStr(length);
-				fileNum = 1;
 				//
 				BtFileInfo btFileInfo = new BtFileInfo();
 
@@ -89,10 +88,10 @@ public class BtInfo {
 
 				files.add(btFileInfo);
 			}
-			//
+			// 哈希
 			this.hash = hash;
-			magnet = BtUtils.magnetTotr(hash);
-
+			//
+			this.time = FastDateFormat.getInstance("yyyy/MM/dd").format(new Date());
 		} catch (Exception e) {
 
 		}
@@ -166,12 +165,20 @@ public class BtInfo {
 		this.hash = hash;
 	}
 
-	public String getMagnet() {
-		return magnet;
+	public List<BtFileInfo> getFiles() {
+		return files;
 	}
 
-	public void setMagnet(String magnet) {
-		this.magnet = magnet;
+	public void setFiles(List<BtFileInfo> files) {
+		this.files = files;
+	}
+
+	public String getTime() {
+		return time;
+	}
+
+	public void setTime(String time) {
+		this.time = time;
 	}
 
 	public int getFileNum() {
@@ -182,15 +189,4 @@ public class BtInfo {
 		this.fileNum = fileNum;
 	}
 
-	public List<BtFileInfo> getFiles() {
-		return files;
-	}
-
-	public void setFiles(List<BtFileInfo> files) {
-		this.files = files;
-	}
-
-	public static void main(String[] args) {
-
-	}
 }
