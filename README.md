@@ -6,7 +6,7 @@
 
 ## 简介
 * 一个使用JAVA实现的BT爬虫，它会记录收集到的种子文件哈希值，及下载torrent文件
-* 一个BT检索引擎，它会将爬取的torrent文件，解析出文件及文件大小，保存到Apache-Lucene中
+* 一个BT检索引擎，它会将爬取的torrent文件，解析出需要的内容，保存到data目录下
 * BT搜索地址: http://localhost:/index
 * 磁力链格式：magnet:?xt=种子文件哈希值
 * 检索页面截图
@@ -22,6 +22,7 @@
 * 实现了DHT节点功能，包括节点路由表，及命令：ping，find_node，get_peers，announce_peer
 * 在DHT节点功能的基础上加入爬虫逻辑，负责发现更多的附近节点
 * 使用BEP09协议扩展协议实现torrent文件下载功能，将爬取到的torrent文件放在torrent/文件夹
+* 使用Apache-Lucene实现全文检索
 
 ## 爬虫逻辑
 
@@ -37,10 +38,16 @@
 * 需要下载torrent文件时，它会向节点表中查询其距离最近的节点，发起get_peers请求
 * 向获取到的peer按照BEP09协议标准发起最终的torrent文件下载 
 
+## 检索逻辑
+
+* 使用Apache-Lucene实现全文档搜索
+* 使用ik-analyzer，对待检索内容做中文分词
+
 ## 示例代码
 ```java
 
-//启动一个DHT点
+//启动一个DHT点并启动一个torrent下载
+//启动多个DHT节点，会共用一个torrent下载
 int port = 0; //随机可用端口，长期爬取建议固定端口及固定IP
 LocalDHTNode node = new DefaultDhtNode(port);//实例化一个DHT节点
 node.start(); //启动
@@ -50,10 +57,15 @@ node.start(); //启动
 ## 运行方式
 
 * 可以直接打包作为SpringBoot运行
-* 也可以查看org.my.pro.dhtcrawler.Main手动启动
+* 也可以查看org.my.pro.dhtcrawler.Main
 * SpringBoot配置说明
-* dht.num=10 //DHT节点数量
-* dht.port=60000 //起始端口
+```
+dht.pass=hedaye   //BT检索功能访问密码配置
+dht.enabled=true  //是否启动BT爬虫功能,不启动，仅有检索功能
+dht.num=1         //DHT节点数量
+dht.port=60000    //DHT节点起始端口
+
+```
 
 ## 备注
 
