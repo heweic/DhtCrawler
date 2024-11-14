@@ -78,7 +78,11 @@ public class LuceneTorrentRespository implements TorrentRespository {
 					// 提交
 					try {
 						writer.commit();
-						reader = DirectoryReader.openIfChanged(reader);
+						DirectoryReader newReader = DirectoryReader.openIfChanged(reader);
+						if(null != newReader) {
+							reader.close();
+							reader = newReader;
+						}
 					} catch (Exception e) {
 						e.printStackTrace();
 						log.error(e.getMessage());
