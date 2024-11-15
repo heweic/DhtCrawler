@@ -1,6 +1,8 @@
 package org.my.pro.dhtcrawler.task;
 
 import java.nio.ByteBuffer;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.my.pro.dhtcrawler.btdownload.BtInfo;
@@ -24,6 +26,8 @@ public class SaveTorrent {
 //
 //	private static final ConcurrentHashMap<String, Object> lockMap = new ConcurrentHashMap<String, Object>();
 
+	private ExecutorService executorService = Executors.newCachedThreadPool();
+
 	private SaveTorrent() {
 	}
 
@@ -44,18 +48,28 @@ public class SaveTorrent {
 		return instance;
 	}
 
-
-
-	
+	/**
+	 * 异步执行，使netty EventLoop专注于IO操作
+	 * 
+	 * @param hash
+	 * @param bs
+	 * @throws Exception
+	 */
 	public void synWriteBytesToFile(String hash, byte[] bs) throws Exception {
-		// 校验数据完整性
-		if (!DigestUtils.sha1Hex(bs).equals(hash)) {
-			throw new Exception(hash + "数据SHA1校验失败!");
-		}
-		
-		BEncodedValue bEncodedValue = BDeCoderProxy.bdecode(ByteBuffer.wrap(bs));
-		BtInfo btInfo = new BtInfo(bEncodedValue, hash);
-		LuceneTorrentRespository.getInstance().saveBtInfo(btInfo);
+		executorService.execute(() -> {
+			// 校验数据完整性
+			if (!DigestUtils.sha1Hex(bs).equals(hash)) {
+				return;
+			}
+
+			try {
+				BEncodedValue bEncodedValue = BDeCoderProxy.bdecode(ByteBuffer.wrap(bs));
+				BtInfo btInfo = new BtInfo(bEncodedValue, hash);
+				LuceneTorrentRespository.getInstance().saveBtInfo(btInfo);
+			} catch (Exception e) {
+				// TODO: handle exception
+			}
+		});
 //		Object lock = lockMap.computeIfAbsent(hash, key -> new Object());
 //		synchronized (lock) {
 //			try {
@@ -70,6 +84,6 @@ public class SaveTorrent {
 //			}
 //		}
 		//
-		
+
 	}
 }
