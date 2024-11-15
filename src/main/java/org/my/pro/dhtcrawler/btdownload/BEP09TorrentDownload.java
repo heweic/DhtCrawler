@@ -37,6 +37,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.AttributeKey;
+import io.netty.util.ReferenceCountUtil;
 
 /**
  * BEP09 torrent下载,单例
@@ -422,11 +423,16 @@ public class BEP09TorrentDownload {
 
 	private void closeChannel(Channel channel) {
 		if (channel != null) {
+			
+			if(null != channel.attr(_TASKINFO).get()) {
+				channel.attr(_TASKINFO).get().clear();
+				channel.attr(_TASKINFO).set(null);
+			}
 			channel.eventLoop().execute(new Runnable() {
 
 				@Override
 				public void run() {
-
+					
 					channel.closeFuture().addListener(futrue -> {
 						if (futrue.isSuccess()) {
 							allChannels.remove(channel.remoteAddress());
@@ -522,6 +528,15 @@ public class BEP09TorrentDownload {
 		public TaskInfo(byte[] hash) {
 			createTime = System.currentTimeMillis();
 			this.hash = hash;
+		}
+		
+		public void clear() {
+			//
+			if(null != buf ) {
+				ReferenceCountUtil.release(buf);
+			}
+			//
+			bodies.clear();
 		}
 
 		public int getIdAdd() {

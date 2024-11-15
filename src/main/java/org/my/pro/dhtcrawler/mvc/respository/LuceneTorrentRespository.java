@@ -120,7 +120,6 @@ public class LuceneTorrentRespository implements TorrentRespository {
 			doc.add(new TextField("files", GsonUtils.toJsonString(btInfo.getFiles()), Field.Store.YES));
 			//
 			rs = writer.updateDocument(new Term("hash", btInfo.getHash()), doc);
-			log.info("add-" + rs + "-" + GsonUtils.toJsonString(btInfo));
 		} catch (Exception e) {
 			log.error(e.getMessage());
 		}
