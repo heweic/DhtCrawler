@@ -193,13 +193,6 @@ public class BEP09TorrentDownload {
 
 					// 如果任务已经完成
 					if (taskInfo.isDown()) {
-						// 移除缓存
-						if (null != taskInfo && taskInfo.getBuf() != null) {
-							taskInfo.getBuf().release();
-						}
-						if (null != taskInfo && taskInfo.getBodies() != null) {
-							taskInfo.getBodies().clear();
-						}
 						// 关闭channel
 						closeChannel(channel);
 						//
@@ -208,14 +201,6 @@ public class BEP09TorrentDownload {
 					long tmpTime = System.currentTimeMillis() - taskInfo.getCreateTime();
 					// 下载限时过后无论超时与否，关闭连接
 					if (tmpTime >= DOWNLOAD_TIME_OUT) {
-						//
-						if (null != taskInfo && taskInfo.getBuf() != null) {
-							taskInfo.getBuf().release();
-						}
-						if (null != taskInfo && taskInfo.getBodies() != null) {
-							taskInfo.getBodies().clear();
-						}
-						//
 						closeChannel(channel);
 						//
 						continue;
@@ -223,13 +208,6 @@ public class BEP09TorrentDownload {
 
 					// 如果在握手超时时间过后，还未开始下载，关闭
 					if (!taskInfo.isReadMetadata() && tmpTime >= HANDSHAKE_TIME_OUT) {
-						//
-						if (null != taskInfo && taskInfo.getBuf() != null) {
-							taskInfo.getBuf().release();
-						}
-						if (null != taskInfo && taskInfo.getBodies() != null) {
-							taskInfo.getBodies().clear();
-						}
 						//
 						closeChannel(channel);
 						//
@@ -428,6 +406,7 @@ public class BEP09TorrentDownload {
 				channel.attr(_TASKINFO).get().clear();
 				channel.attr(_TASKINFO).set(null);
 			}
+			
 			channel.eventLoop().execute(new Runnable() {
 
 				@Override
