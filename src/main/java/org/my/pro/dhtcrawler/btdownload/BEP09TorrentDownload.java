@@ -237,7 +237,6 @@ public class BEP09TorrentDownload {
 		if (allChannels.containsKey(socketAddress)) {
 			return;
 		}
-		// 如果当前channel数大于
 
 		// 创建连接并发送握手包
 		ChannelFuture channelFuture = bootstrap.connect(socketAddress);
@@ -401,17 +400,17 @@ public class BEP09TorrentDownload {
 
 	private void closeChannel(Channel channel) {
 		if (channel != null) {
-			
-			if(null != channel.attr(_TASKINFO).get()) {
+
+			if (null != channel.attr(_TASKINFO).get()) {
 				channel.attr(_TASKINFO).get().clear();
 				channel.attr(_TASKINFO).set(null);
 			}
-			
+
 			channel.eventLoop().execute(new Runnable() {
 
 				@Override
 				public void run() {
-					
+
 					channel.closeFuture().addListener(futrue -> {
 						if (futrue.isSuccess()) {
 							allChannels.remove(channel.remoteAddress());
@@ -508,10 +507,10 @@ public class BEP09TorrentDownload {
 			createTime = System.currentTimeMillis();
 			this.hash = hash;
 		}
-		
+
 		public void clear() {
 			//
-			if(null != buf ) {
+			if (null != buf) {
 				ReferenceCountUtil.release(buf);
 			}
 			//

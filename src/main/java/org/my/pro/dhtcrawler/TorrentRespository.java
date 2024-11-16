@@ -12,6 +12,13 @@ import org.my.pro.dhtcrawler.mvc.pojo.PageBean;
  *         </pre>
  */
 public interface TorrentRespository {
+	
+	/**
+	 * 是否存在
+	 * @param hash
+	 * @return
+	 */
+	public boolean exist(String hash);
 
 	/**
 	 * 

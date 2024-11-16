@@ -4,8 +4,8 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -56,7 +56,10 @@ public class LuceneTorrentRespository implements TorrentRespository {
 	private static volatile LuceneTorrentRespository instance;
 
 	// 定时任务
-	ScheduledExecutorService scheduledExecutor;
+	private ScheduledExecutorService scheduledExecutor;
+
+	private ConcurrentHashMap<String, Object> hashSet;
+	private static final Object EMPTY = new Object();
 
 	private LuceneTorrentRespository() {
 
@@ -68,7 +71,7 @@ public class LuceneTorrentRespository implements TorrentRespository {
 			//
 			//
 			reader = DirectoryReader.open(writer);
-
+			//
 			// 一分钟提交一次文档到磁盘，并重新设置DirectoryReader
 			scheduledExecutor = Executors.newScheduledThreadPool(1);
 			scheduledExecutor.scheduleAtFixedRate(new Runnable() {
@@ -79,7 +82,7 @@ public class LuceneTorrentRespository implements TorrentRespository {
 					try {
 						writer.commit();
 						DirectoryReader newReader = DirectoryReader.openIfChanged(reader);
-						if(null != newReader) {
+						if (null != newReader) {
 							reader.close();
 							reader = newReader;
 						}
@@ -89,6 +92,17 @@ public class LuceneTorrentRespository implements TorrentRespository {
 					}
 				}
 			}, 1000 * 60, 1000 * 60, TimeUnit.MILLISECONDS);
+			// 加载所有已获得哈希
+			//
+			hashSet = new ConcurrentHashMap<String, Object>();
+			new Thread(new Runnable() {
+
+				@Override
+				public void run() {
+					putAllHashToMap(hashSet);
+					log.info("加载哈希缓存完成.数量" + hashSet.size());
+				}
+			}).start();
 		} catch (IOException e) {
 			log.error(e.getMessage());
 			e.printStackTrace();
@@ -109,6 +123,11 @@ public class LuceneTorrentRespository implements TorrentRespository {
 	}
 
 	@Override
+	public boolean exist(String hash) {
+		return hashSet.containsKey(hash);
+	}
+
+	@Override
 	public long saveBtInfo(BtInfo btInfo) {
 		long rs = 0;
 		try {
@@ -120,6 +139,7 @@ public class LuceneTorrentRespository implements TorrentRespository {
 			doc.add(new TextField("files", GsonUtils.toJsonString(btInfo.getFiles()), Field.Store.YES));
 			//
 			rs = writer.updateDocument(new Term("hash", btInfo.getHash()), doc);
+			hashSet.put(btInfo.getHash(), EMPTY);
 		} catch (Exception e) {
 			log.error(e.getMessage());
 		}
@@ -151,10 +171,10 @@ public class LuceneTorrentRespository implements TorrentRespository {
 		return null;
 	}
 
-	public List<BtInfo> all() {
+	private void putAllHashToMap(ConcurrentHashMap<String, Object> map) {
 		MatchAllDocsQuery allDocsQuery = new MatchAllDocsQuery();
 		IndexSearcher indexSearcher = new IndexSearcher(reader);
-		List<BtInfo> btInfos = new LinkedList<BtInfo>();
+
 		try {
 			int count = indexSearcher.count(allDocsQuery);
 			TopDocs hits = indexSearcher.search(allDocsQuery, count);
@@ -162,13 +182,16 @@ public class LuceneTorrentRespository implements TorrentRespository {
 
 			for (int i = 0; i < hits.scoreDocs.length; i++) {
 				Document doc = storedFields.document(hits.scoreDocs[i].doc);
-				btInfos.add(read(doc));
+				String hash = doc.get("hash");
+				if (null != hash) {
+					map.put(hash, EMPTY);
+				}
 			}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		return btInfos;
+
 	}
 
 	@Override
