@@ -469,10 +469,10 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 		state = true;
 
 		findPeersQueue = new LinkedBlockingQueue<Runnable>();
-		tryFindPeerExe_findpeers1 = new ThreadPoolExecutor(12, 12, 0L, TimeUnit.MILLISECONDS, findPeersQueue);
+		tryFindPeerExe_findpeers1 = new ThreadPoolExecutor(12, 64, 0L, TimeUnit.MILLISECONDS, findPeersQueue);
 
 		tryFindPeerExe_announce_peer = Executors.newFixedThreadPool(6);
-		downloadTorrentExe = Executors.newFixedThreadPool(32);
+		downloadTorrentExe = Executors.newCachedThreadPool();
 		findPeersHash = new ConcurrentHashMap<String, Object>();
 		allNodes = new ConcurrentSkipListMap<BigInteger, Node>(new NodeComParator());
 		allnodesKeyMap = new ConcurrentHashMap<BigInteger, Object>();

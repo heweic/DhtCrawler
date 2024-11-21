@@ -67,7 +67,9 @@ public class LuceneTorrentRespository implements TorrentRespository {
 			directory = FSDirectory.open(Paths.get("data"));
 			analyzer = new IKAnalyzer();
 			config = new IndexWriterConfig(analyzer);
+			config.setRAMBufferSizeMB(64);
 			writer = new IndexWriter(directory, config);
+			
 			//
 			//
 			reader = DirectoryReader.open(writer);
@@ -199,13 +201,14 @@ public class LuceneTorrentRespository implements TorrentRespository {
 		PageBean bean = new PageBean();
 		List<BtInfo> rs = new ArrayList<BtInfo>();
 		//
+		IndexSearcher indexSearcher = new IndexSearcher(reader);
+
+		Query query1 = new TermQuery(new Term("name", ss));
+		Query query2 = new TermQuery(new Term("files", ss));
+		Query query3 = new TermQuery(new Term("hash", ss));
 		try {
 			//
-			IndexSearcher indexSearcher = new IndexSearcher(reader);
-
-			Query query1 = new TermQuery(new Term("name", ss));
-			Query query2 = new TermQuery(new Term("files", ss));
-			Query query3 = new TermQuery(new Term("hash", ss));
+			
 			;
 			BooleanQuery booleanQuery = new BooleanQuery.Builder().add(query1, BooleanClause.Occur.SHOULD)
 					.add(query2, BooleanClause.Occur.SHOULD).add(query3, BooleanClause.Occur.SHOULD).build();

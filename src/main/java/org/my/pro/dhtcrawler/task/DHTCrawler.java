@@ -188,6 +188,7 @@ public class DHTCrawler implements DHTTask {
 				List<Node> nodes = dhtNode.findNearest(targetNode);
 				if (nodes.size() > 0) {
 
+					//广度优先遍历，可做先广度优先遍历，然后再多线程深度优先遍历的优化
 					// 每一层待执行查找的node
 					ConcurrentHashMap<String, Node> rs = new ConcurrentHashMap<String, Node>();
 					nodes.forEach(e -> rs.put(e.ip() + e.port(), e));
@@ -195,7 +196,7 @@ public class DHTCrawler implements DHTTask {
 
 					try {
 
-						while (rs.size() > 0 || !Thread.currentThread().isInterrupted()) {
+						while (rs.size() > 0 && !Thread.currentThread().isInterrupted()) {
 							List<java.util.concurrent.Future<?>> futures = new ArrayList<java.util.concurrent.Future<?>>(
 									rs.size());
 							//

@@ -357,6 +357,7 @@ public class BEP09TorrentDownload {
 		@Override
 		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
 			//
+			closeChannel(ctx.channel());
 		}
 
 		@Override
@@ -380,6 +381,14 @@ public class BEP09TorrentDownload {
 	}
 
 	class TorrentFullHandler extends SimpleChannelInboundHandler<Full> {
+		
+		
+
+		@Override
+		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+			//
+			closeChannel(ctx.channel());
+		}
 
 		@Override
 		protected void channelRead0(ChannelHandlerContext ctx, Full msg) throws Exception {
