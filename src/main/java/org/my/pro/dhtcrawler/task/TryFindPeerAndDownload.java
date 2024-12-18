@@ -383,7 +383,9 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 					subTask(e.ip(), e.port(), torrentHash);
 
 				}
-
+				//
+				dhtNode.setHashTime();
+				
 			} catch (Exception e) {
 				log.error(e.getMessage());
 			}

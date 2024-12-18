@@ -110,7 +110,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 	}
 
 	private static long HASH_TIME_OUT = 1000 * 60 * 5;
-	private static long LIVE_TIME_OUT = 1000 * 60 * 60;
+	private static long LIVE_TIME_OUT = 1000 * 60 * 20;
 
 	private volatile long startTime = System.currentTimeMillis();
 
@@ -122,11 +122,18 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 	@Override
 	public boolean hasGetHash() {
-		//如果获取哈希未超时且存货时间未超时，返回true
+		//
 		return System.currentTimeMillis() - hashTime < HASH_TIME_OUT
-				&& (System.currentTimeMillis() - startTime) < LIVE_TIME_OUT;
+				|| (System.currentTimeMillis() - startTime) < LIVE_TIME_OUT;
 	}
+	
+	
 
+
+	@Override
+	public void setHashTime() {
+		this.hashTime = System.currentTimeMillis();
+	}
 
 	@Override
 	public void resetId(byte[] id) {
@@ -134,7 +141,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 		//
 		routingTable.resetNodeId(id);
 		//
-		hashTime = System.currentTimeMillis();
+		hashTime = System.currentTimeMillis(); 
 		//
 		startTime = System.currentTimeMillis();
 
@@ -240,7 +247,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 		@Override
 		public void handler(byte[] hash, KrpcMessage message) {
-			hashTime = System.currentTimeMillis();
+			
 			writeHashToFile(hash, KeyWord.GET_PEERS);
 			// 提交下载任务
 			downloadTorrent.subTask_findpeers(hash, localDHTNode);
@@ -259,7 +266,7 @@ public class DefaultDhtNode extends AbstractDhtNode {
 
 		@Override
 		public void handler(byte[] hash, KrpcMessage message) {
-			hashTime = System.currentTimeMillis();
+			
 			writeHashToFile(hash, KeyWord.ANNOUNCE_PEER);
 			//
 			DefaultRequest defaultRequest = (DefaultRequest) message;

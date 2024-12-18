@@ -93,6 +93,10 @@ public interface LocalDHTNode {
 	 */
 	public boolean hasGetHash();
 	/**
+	 * 
+	 */
+	public void setHashTime();
+	/**
 	 * 不会改变的唯一本地标识
 	 * @return
 	 */

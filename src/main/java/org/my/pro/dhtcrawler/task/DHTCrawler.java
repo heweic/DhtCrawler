@@ -270,6 +270,8 @@ public class DHTCrawler implements DHTTask {
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
+					log.info("workThread Stop..");
+					
 					// 重新初始化初始化线程及工作线程
 					workThread = new Thread(new workTask(), dhtNode.port() + "-dhtcrawler-workThread");
 					initThread = new Thread(new InitTask(), dhtNode.port() + "-dhtcrawler-initThread");

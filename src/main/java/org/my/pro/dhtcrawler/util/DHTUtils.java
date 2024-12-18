@@ -4,6 +4,8 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.commons.rng.UniformRandomProvider;
 import org.apache.commons.rng.simple.RandomSource;
 import org.my.pro.dhtcrawler.LocalDHTNode;
@@ -19,6 +21,9 @@ public class DHTUtils {
 	public static UniformRandomProvider rng = RandomSource.XO_RO_SHI_RO_128_PP.create();
 
 	public final static byte[] MAX_NODE_ID = hexStringToByteArray("ffffffffffffffffffffffffffffffffffffffff");
+	
+	
+	private static Log  log = LogFactory.getLog(DHTUtils.class);
 
 	/**
 	 * 
@@ -53,6 +58,7 @@ public class DHTUtils {
 	public static byte[] generateNodeId() {
 		byte[] peerId = new byte[20];
 		rng.nextBytes(peerId);
+		log.info("随机NodeID -> " + byteArrayToHexString(peerId));
 		return peerId;
 	}
 
@@ -62,7 +68,9 @@ public class DHTUtils {
 	 * @return
 	 */
 	public static byte[] generatePeerId() {
-		return generateNodeId();
+		byte[] peerId = new byte[20];
+		rng.nextBytes(peerId);
+		return peerId;
 	}
 
 	/**
@@ -144,5 +152,6 @@ public class DHTUtils {
 	public static void nextBytes(byte[] bs) {
 		rng.nextBytes(bs);
 	}
+	
 
 }
