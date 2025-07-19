@@ -28,9 +28,7 @@ public class FindNodeHandler extends RequestMessageHandler {
 	@Override
 	public KrpcMessage handler0(KrpcMessage message) throws Exception {
 
-		if (message instanceof DefaultRequest) {
-			//
-			DefaultRequest defaultRequest = (DefaultRequest) message;
+		if (message instanceof DefaultRequest defaultRequest) {
 			byte[] bs = defaultRequest.a().getMap().get(KeyWord.TARGET).getBytes();
 
 			//

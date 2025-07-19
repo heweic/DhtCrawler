@@ -79,7 +79,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 
 	// 节点总表最大节点数
 	// 这个节点总数应该是和爬虫的发现速度产生关系的，这里就简单定死就行
-	private static int MAX_NODESNUM = 88888 * 2;
+	private static int MAX_NODESNUM = 3000;
 	//
 	private TorrentRespository respository;
 
@@ -91,7 +91,7 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 	}
 
 	/**
-	 * 双锁懒汉单例
+	 *
 	 * 
 	 * @return
 	 */
@@ -323,15 +323,15 @@ public class TryFindPeerAndDownload implements DownloadTorrent, DHTTask {
 
 		@Override
 		public void run() {
-
+			
+			findPeersHash.put(DHTUtils.byteArrayToHexString(torrentHash), empty);
+			
 			//
 			List<Node> nodes = findNearest(torrentHash);
 
 			if (null == nodes) {
 				return;
 			}
-
-			findPeersHash.put(DHTUtils.byteArrayToHexString(torrentHash), empty);
 			try {
 				//
 

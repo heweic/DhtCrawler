@@ -123,50 +123,64 @@ public class BEP09TorrentDownload {
 			Iterator<Entry<SocketAddress, Channel>> it = allChannels.entrySet().iterator();
 			while (it.hasNext()) {
 				Entry<SocketAddress, Channel> entry = it.next();
+
 				Channel channel = entry.getValue();
+				
 				TaskInfo taskInfo = channel.attr(_TASKINFO).get();
+				if (taskInfo == null) {
+					continue;
+				}
+				// 确保只执行一次
+				if (taskInfo.isReadMetadata()) {
+					continue;
+				}
+				// 如果到定时读取响应时间
+				if (System.currentTimeMillis() - taskInfo.getCreateTime() < HANDSHAKE_TIME) {
+					continue;
+				}
 				//
 				try {
-					if (!taskInfo.isReadMetadata()
-							&& System.currentTimeMillis() - taskInfo.getCreateTime() >= HANDSHAKE_TIME) {
-						boolean canDownload = false;
-						for (Body body : taskInfo.getBodies()) {
-							//
-							if (body.getType() == 20) {
 
-								BEncodedValue bv = BDeCoderProxy.bdecode(body.getDictionary());
-								taskInfo.setUt_metadata(bv.getMap().get("m").getMap().get("ut_metadata").getInt());
-								taskInfo.setMetadata_size(bv.getMap().get("metadata_size").getInt());
-								taskInfo.setBuf(Unpooled.buffer(taskInfo.getMetadata_size()));
-								canDownload = true;
+					boolean canDownload = false;
 
-							}
-							if (body.getType() == 4) {
-								canDownload = false;
-								break;
-							}
-						}
-						if (canDownload) {
-							if (null != channel) {
-								channel.eventLoop().execute(new Runnable() {
-
-									@Override
-									public void run() {
-										try {
-											// 扩展握手
-											sendHandshakeMsg(channel, taskInfo.getMetadata_size());
-											// 请求第一块数据
-											sendMetadataRequest(channel, 0, taskInfo.getUt_metadata());
-										} catch (Exception e) {
-										}
-									}
-								});
-							}
-						}
-
+					for (Body body : taskInfo.getBodies()) {
 						//
-						taskInfo.setReadMetadata(true);
+						if (body.getType() == 20) {
+
+							BEncodedValue bv = BDeCoderProxy.bdecode(body.getDictionary());
+							taskInfo.setUt_metadata(bv.getMap().get("m").getMap().get("ut_metadata").getInt());
+							taskInfo.setMetadata_size(bv.getMap().get("metadata_size").getInt());
+							taskInfo.setBuf(Unpooled.buffer(taskInfo.getMetadata_size()));
+							canDownload = true;
+
+						}
+						if (body.getType() == 4) {
+							canDownload = false;
+							break;
+						}
 					}
+
+					if (canDownload) {
+						channel.eventLoop().execute(new Runnable() {
+
+							@Override
+							public void run() {
+								try {
+									// 扩展握手
+									sendHandshakeMsg(channel, taskInfo.getMetadata_size());
+									// 请求第一块数据
+									sendMetadataRequest(channel, 0, taskInfo.getUt_metadata());
+								} catch (Exception e) {
+								}
+							}
+						});
+
+					}
+					
+
+					//
+					taskInfo.setReadMetadata(true);
+
 				} catch (Exception e) {
 					// TODO: handle exception
 				}
@@ -381,8 +395,6 @@ public class BEP09TorrentDownload {
 	}
 
 	class TorrentFullHandler extends SimpleChannelInboundHandler<Full> {
-		
-		
 
 		@Override
 		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {

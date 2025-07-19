@@ -25,13 +25,12 @@ public class DefaultResponseHandler extends ResponseMessageHandler {
 	@Override
 	public KrpcMessage handler0(KrpcMessage message) throws Exception {
 
-		if (message instanceof DefaultResponse) {
+		if (message instanceof DefaultResponse defaultResponse) {
 			// 需要处理callBack的是find_peer，返回的节点不添加到自身的节点表
 			localNode.back(message);
 			//
 
 			try {
-				DefaultResponse defaultResponse = (DefaultResponse) message;
 				//
 				if (defaultResponse.r().getMap().containsKey(KeyWord.NODES)) {
 					byte[] bs = defaultResponse.r().getMap().get(KeyWord.NODES).getBytes();

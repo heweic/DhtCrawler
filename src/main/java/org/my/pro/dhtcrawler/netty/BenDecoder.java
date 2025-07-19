@@ -59,7 +59,8 @@ public class BenDecoder extends MessageToMessageDecoder<DatagramPacket> {
 			}
 
 		} catch (Exception e) {
-			return;
+			throw new Exception("bencode 解码异常!" + e.getMessage());
+
 		}
 	}
 

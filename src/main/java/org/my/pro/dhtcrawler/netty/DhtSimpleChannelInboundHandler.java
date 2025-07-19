@@ -16,12 +16,12 @@ public class DhtSimpleChannelInboundHandler extends MessageToMessageDecoder<Krpc
 	@Override
 	protected void decode(ChannelHandlerContext ctx, KrpcMessage msg, List<Object> out) throws Exception {
 
-		if (msg instanceof DefaultRequest) {
-			out.add((DefaultRequest) msg);
+		if (msg instanceof DefaultRequest request) {
+			out.add(request);
 
-		} else if (msg instanceof DefaultResponse) {
+		} else if (msg instanceof DefaultResponse response) {
 
-			out.add((DefaultResponse) msg);
+			out.add(response);
 
 		}
 

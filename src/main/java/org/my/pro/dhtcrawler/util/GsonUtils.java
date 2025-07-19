@@ -30,8 +30,8 @@ public class GsonUtils {
 		if (null == obj) {
 			return empty_Object;
 		}
-		if (obj instanceof String) {
-			return (String) obj;
+		if (obj instanceof String string) {
+			return string;
 		}
 		return GSON.toJson(obj, obj.getClass());
 	}

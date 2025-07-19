@@ -81,7 +81,7 @@ public class DHTUtils {
 	public static String byteArrayToHexString(byte[] bytes) {
 		StringBuilder sb = new StringBuilder(bytes.length * 2);
 		for (byte b : bytes) {
-			sb.append(String.format("%02x", b & 0xff));
+			sb.append("%02x".formatted(b & 0xff));
 		}
 		return sb.toString();
 	}

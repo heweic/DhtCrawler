@@ -2,7 +2,7 @@ package org.my.pro.dhtcrawler.mvc.respository;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -64,7 +64,7 @@ public class LuceneTorrentRespository implements TorrentRespository {
 	private LuceneTorrentRespository() {
 
 		try {
-			directory = FSDirectory.open(Paths.get("data"));
+			directory = FSDirectory.open(Path.of("data"));
 			analyzer = new IKAnalyzer();
 			config = new IndexWriterConfig(analyzer);
 			config.setRAMBufferSizeMB(64);

@@ -34,7 +34,7 @@ public class BtUtils {
 
 	public static String magnetTotr(String hash) {
 
-		return String.format(forM, hash.toLowerCase());
+		return forM.formatted(hash.toLowerCase());
 	}
 	
 	
